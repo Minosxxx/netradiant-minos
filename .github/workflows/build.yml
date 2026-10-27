@@ -1,6 +1,9 @@
 name: build
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  push:
+    branches: [hotspot]
 
 jobs:
   windows-msys:
@@ -40,8 +43,7 @@ jobs:
     - name: Build
       run: |
         make DOWNLOAD_GAMEPACKS=no MAKEFILE_CONF=msys2-Makefile.conf BUILD=release -j4
-        wget https://www.dropbox.com/s/b1xpajzfa6yjlzf/netradiant-custom-extra-gamepacks.zip
-        unzip -o netradiant-custom-extra-gamepacks.zip -d "install"
+        ( wget https://www.dropbox.com/s/b1xpajzfa6yjlzf/netradiant-custom-extra-gamepacks.zip && unzip -o netradiant-custom-extra-gamepacks.zip -d "install" ) || echo "extra gamepacks unavailable, skipping"
         mkdir -p install/settings
         echo > install/settings/DUMMMY
 
@@ -52,6 +54,7 @@ jobs:
         if-no-files-found: error
 
   linux:
+    if: github.event_name == 'workflow_dispatch'
     name: ${{ matrix.config }} Linux ${{ matrix.arch }}
     runs-on: ubuntu-latest
     strategy:
