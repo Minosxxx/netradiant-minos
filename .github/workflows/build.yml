@@ -30,7 +30,7 @@ jobs:
     steps:
     - uses: msys2/setup-msys2@v2
       with:
-        install: ${{ matrix.prefix }}-qt5-base ${{ matrix.prefix }}-libxml2 git
+        install: ${{ matrix.prefix }}-toolchain ${{ matrix.prefix }}-qt5-base ${{ matrix.prefix }}-libxml2 ${{ matrix.prefix }}-libpng ${{ matrix.prefix }}-libjpeg-turbo ${{ matrix.prefix }}-glib2 ${{ matrix.prefix }}-zlib make git file wget unzip
         msystem: ${{ matrix.msystem }}
         path-type: minimal
         release: false
