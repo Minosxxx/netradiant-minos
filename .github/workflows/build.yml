@@ -30,7 +30,7 @@ jobs:
     steps:
     - uses: msys2/setup-msys2@v2
       with:
-        install: ${{ matrix.prefix }}-toolchain ${{ matrix.prefix }}-qt5-base ${{ matrix.prefix }}-libxml2 ${{ matrix.prefix }}-libpng ${{ matrix.prefix }}-libjpeg-turbo ${{ matrix.prefix }}-glib2 ${{ matrix.prefix }}-zlib make git file wget unzip
+        install: ${{ matrix.prefix }}-toolchain ${{ matrix.prefix }}-qt5-base ${{ matrix.prefix }}-libxml2 ${{ matrix.prefix }}-libpng ${{ matrix.prefix }}-libjpeg-turbo ${{ matrix.prefix }}-glib2 ${{ matrix.prefix }}-zlib ${{ matrix.prefix }}-pkgconf make git file wget unzip diffutils
         msystem: ${{ matrix.msystem }}
         path-type: minimal
         release: false
@@ -42,10 +42,22 @@ jobs:
 
     - name: Build
       run: |
-        make DOWNLOAD_GAMEPACKS=no MAKEFILE_CONF=msys2-Makefile.conf BUILD=release -j4
+        set -o pipefail
+        if ! make DOWNLOAD_GAMEPACKS=no MAKEFILE_CONF=msys2-Makefile.conf BUILD=release CXXFLAGS="-include cstdint" -j4 2>&1 | tee build.log; then
+          # show the real compiler/make errors in the run summary
+          grep -E "error|Error|No rule|not found|undefined reference" build.log | grep -v -- "-Werror" | head -20 | sed 's/^/::error::/'
+          exit 1
+        fi
         ( wget https://www.dropbox.com/s/b1xpajzfa6yjlzf/netradiant-custom-extra-gamepacks.zip && unzip -o netradiant-custom-extra-gamepacks.zip -d "install" ) || echo "extra gamepacks unavailable, skipping"
         mkdir -p install/settings
         echo > install/settings/DUMMMY
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-log
+        path: build.log
+        if-no-files-found: ignore
 
     - uses: actions/upload-artifact@v4
       with:
