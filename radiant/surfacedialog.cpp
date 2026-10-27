@@ -25,6 +25,7 @@
 // Leonardo Zide (leo@lokigames.com)
 //
 
+#include "hotspot.h"
 #include "surfacedialog.h"
 
 #include "debugging/debugging.h"
@@ -820,6 +821,13 @@ void SurfaceInspector::BuildDialog(){
 			}
 			{
 				grid->addWidget( new QLabel( "Patch" ), 3, 0 );
+			}
+			{
+				auto *b = new QPushButton( "Hotspot" );
+				b->setMinimumWidth( 10 );
+				b->setToolTip( "Fit each selected face to the best matching rectangle of its texture's .hotspot sheet\n(Ctrl+Shift+H)" );
+				grid->addWidget( b, 4, 0, 1, 2 );
+				QObject::connect( b, &QAbstractButton::clicked, Select_HotspotTexture );
 			}
 			{
 				auto *b = new QPushButton( "Natural" );
@@ -1762,6 +1770,7 @@ void SurfaceInspector_Construct(){
 	g_SurfaceInspector = new SurfaceInspector;
 
 	SurfaceInspector_registerCommands();
+	Hotspot_registerCommands();
 
 	FaceTextureClipboard_setDefault();
 

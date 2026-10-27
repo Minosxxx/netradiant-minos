@@ -897,6 +897,7 @@ $(INSTALLDIR)/radiant.$(EXE): \
 	radiant/scenegraph.o \
 	radiant/selection.o \
 	radiant/select.o \
+	radiant/hotspot.o \
 	radiant/server.o \
 	radiant/sockets.o \
 	radiant/stacktrace.o \

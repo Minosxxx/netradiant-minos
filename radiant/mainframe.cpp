@@ -1080,6 +1080,7 @@ void create_selection_menu( QMenuBar *menubar ){
 
 	menu->addSeparator();
 	create_menu_item_with_mnemonic( menu, "Snap To Grid", "SnapToGrid" );
+	create_menu_item_with_mnemonic( menu, "Hotspot Texture", "HotspotTexture" );
 
 	menu->addSeparator();
 
@@ -1276,6 +1277,7 @@ void SelectByType_registerShortcuts(){
 
 void SurfaceInspector_registerShortcuts(){
 	command_connect_accelerator( "FitTexture" );
+	command_connect_accelerator( "HotspotTexture" );
 	command_connect_accelerator( "FitTextureWidth" );
 	command_connect_accelerator( "FitTextureHeight" );
 	command_connect_accelerator( "FitTextureWidthOnly" );
