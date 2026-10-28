@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QGuiApplication>
 #include <QCryptographicHash>
+#include <QRegularExpression>
 
 #include "ishaders.h"
 #include "iimage.h"
@@ -664,8 +665,9 @@ private:
 			                 .arg( preset_name( m_runQuality ) )
 			                 .arg( m_totalClock.elapsed() / 1000.0, 0, 'f', 1 )
 			                 .arg( m_stepTimes.join( ", " ) );
+			status += ". " + lightSummary();
 			if ( g_region_active )
-				status += ". Region only";
+				status += ". Region only: the region's walls block sun and sky light from outside it";
 			if ( m_leaked )
 				status += ". Warning: the map leaks";
 			m_status->setText( status );
@@ -673,6 +675,31 @@ private:
 		}
 		if ( m_pending )
 			requestCompile( false );
+	}
+
+	/// What q3map2 reported creating, e.g. "Lights: 12 point, 1 spot, 0 area, 901 sun/sky (sky: textures/x)".
+	QString lightSummary() const {
+		const QString log = m_log->toPlainText();
+		const auto count = [&]( const char* label ){
+			const QRegularExpression re( QString( "(\\d+)\\s+%1" ).arg( QRegularExpression::escape( label ) ) );
+			QString last = "?";
+			for ( auto it = re.globalMatch( log ); it.hasNext(); )
+				last = it.next().captured( 1 );
+			return last;
+		};
+		QString s = QString( "Lights: %1 point, %2 spot, %3 area, %4 sun/sky" )
+		            .arg( count( "point lights" ), count( "spotlights" ), count( "diffuse (area) lights" ), count( "sun/sky lights" ) );
+		QStringList skies;
+		const QRegularExpression skyRe( "^(?:Sky|Sun): (\\S+)", QRegularExpression::MultilineOption );
+		for ( auto it = skyRe.globalMatch( log ); it.hasNext(); )
+		{
+			const QString name = it.next().captured( 1 );
+			if ( !skies.contains( name ) )
+				skies << name;
+		}
+		if ( !skies.isEmpty() )
+			s += " (from " + skies.join( ", " ) + ")";
+		return s;
 	}
 
 	bool loadBsp(){
