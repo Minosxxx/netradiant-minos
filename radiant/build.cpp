@@ -468,6 +468,36 @@ void project_verify( Project& project, Tools& tools ){
 #endif
 }
 
+/// All commands of all builds, those of the most recently run build first.
+std::vector<CopiedString> build_construct_all_commands(){
+	for ( const auto& [ name, tool ] : g_build_tools )
+	{
+		StringBuffer output;
+		tool.evaluate( output );
+		build_set_variable( name.c_str(), output.c_str() );
+	}
+	std::vector<CopiedString> commands;
+	const auto add = [&]( const Build& build ){
+		for ( const auto& command : build )
+		{
+			StringBuffer output;
+			command.evaluate( output );
+			if ( !output.empty() )
+				commands.emplace_back( output.c_str() );
+		}
+	};
+	const std::size_t last = Project_find( g_build_project, g_lastExecutedBuild );
+	std::size_t index = 0;
+	for ( const auto& build : g_build_project )
+		if ( index++ == last )
+			add( build.second );
+	index = 0;
+	for ( const auto& build : g_build_project )
+		if ( index++ != last )
+			add( build.second );
+	return commands;
+}
+
 /// Evaluates a build tool variable (e.g. "q3map2") with the current build variables.
 bool build_evaluate_tool( const char* name, CopiedString& output ){
 	const auto it = g_build_tools.find( name );

@@ -39,7 +39,9 @@ uniform mat4 u_mvp;
 varying vec2 v_st;
 varying vec2 v_lm;
 varying vec4 v_color;
+varying vec3 v_pos;
 void main(){
+	v_pos = a_pos;
 	v_st = a_st;
 	v_lm = a_lm;
 	v_color = a_color;
@@ -55,7 +57,7 @@ const char* const g_fragmentShader = R"(
 #version 120
 uniform sampler2D u_tex;
 uniform sampler2D u_lightmap;
-uniform int u_source;          // 0 lightmap, 1 vertex colour, 2 identity (unlit)
+uniform int u_source;          // 0 lightmap, 1 vertex colour, 2 identity (unlit), 3 sky box (unlit)
 uniform float u_identity;      // tr.identityLight
 uniform bool u_whiteTexture;   // lighting-only view
 uniform bool u_alphaTest;
@@ -65,9 +67,37 @@ uniform float u_overbright;    // 2^overbrightBits of the display ramp
 varying vec2 v_st;
 varying vec2 v_lm;
 varying vec4 v_color;
+varying vec3 v_pos;
+uniform vec3 u_eye;
+uniform sampler2D u_sky0, u_sky1, u_sky2, u_sky3, u_sky4, u_sky5; // rt lf bk ft up dn
+// inverse of MakeSkyVec() in tr_sky.c: which box side a view direction hits, and where
+vec4 skybox( vec3 d ){
+	vec3 a = abs( d );
+	float s, t;
+	int face;
+	if ( a.x >= a.y && a.x >= a.z ) {
+		if ( d.x > 0.0 ) { face = 0; s = -d.y / a.x; t = d.z / a.x; }
+		else             { face = 1; s =  d.y / a.x; t = d.z / a.x; }
+	}
+	else if ( a.y >= a.z ) {
+		if ( d.y > 0.0 ) { face = 2; s =  d.x / a.y; t = d.z / a.y; }
+		else             { face = 3; s = -d.x / a.y; t = d.z / a.y; }
+	}
+	else{
+		if ( d.z > 0.0 ) { face = 4; s = -d.y / a.z; t = -d.x / a.z; }
+		else             { face = 5; s = -d.y / a.z; t =  d.x / a.z; }
+	}
+	vec2 st = vec2( ( s + 1.0 ) * 0.5, 1.0 - ( t + 1.0 ) * 0.5 );
+	if ( face == 0 ) return texture2D( u_sky0, st );
+	if ( face == 1 ) return texture2D( u_sky1, st );
+	if ( face == 2 ) return texture2D( u_sky2, st );
+	if ( face == 3 ) return texture2D( u_sky3, st );
+	if ( face == 4 ) return texture2D( u_sky4, st );
+	return texture2D( u_sky5, st );
+}
 vec3 q( vec3 c ){ return floor( clamp( c, 0.0, 1.0 ) * 255.0 + 0.5 ) / 255.0; }
 void main(){
-	vec4 t = u_whiteTexture ? vec4( 1.0 ) : texture2D( u_tex, v_st );
+	vec4 t = u_source == 3 ? skybox( v_pos - u_eye ) : u_whiteTexture ? vec4( 1.0 ) : texture2D( u_tex, v_st );
 	if ( u_alphaTest && t.a < 0.5 )
 		discard;
 	vec3 light;
@@ -124,6 +154,8 @@ View::~View(){
 
 void View::setMap( const Bsp& bsp ){
 	m_bsp = bsp;
+	for ( GpuMaterial& m : m_materials )
+		releaseMaterial( m );
 	m_materials.clear();
 	m_materials.resize( m_bsp.shaders.size() );
 	for ( std::size_t i = 0; i < m_bsp.shaders.size(); ++i )
@@ -135,6 +167,8 @@ void View::setMap( const Bsp& bsp ){
 
 void View::clearMap(){
 	m_bsp = Bsp();
+	for ( GpuMaterial& m : m_materials )
+		releaseMaterial( m );
 	m_materials.clear();
 	m_mapDirty = m_texturesDirty = m_lightmapsDirty = true;
 	update();
@@ -224,10 +258,25 @@ void View::freeGpu(){
 		glDeleteTextures( GLsizei( m_lightmapTextures.size() ), m_lightmapTextures.data() );
 	m_lightmapTextures.clear();
 	for ( GpuMaterial& m : m_materials )
-		if ( m.texture != 0 ) {
-			glDeleteTextures( 1, &m.texture );
-			m.texture = 0;
+		releaseMaterial( m );
+	deleteOrphans();
+}
+
+void View::releaseMaterial( GpuMaterial& m ){
+	if ( m.texture != 0 )
+		m_orphanTextures.push_back( m.texture );
+	m.texture = 0;
+	for ( GLuint& t : m.sky )
+		if ( t != 0 ) {
+			m_orphanTextures.push_back( t );
+			t = 0;
 		}
+}
+
+void View::deleteOrphans(){
+	if ( !m_orphanTextures.empty() && m_glReady )
+		glDeleteTextures( GLsizei( m_orphanTextures.size() ), m_orphanTextures.data() );
+	m_orphanTextures.clear();
 }
 
 void View::uploadMap(){
@@ -309,9 +358,10 @@ void View::uploadLightmaps(){
 void View::uploadTextures(){
 	for ( GpuMaterial& m : m_materials )
 	{
-		if ( m.texture != 0 )
-			glDeleteTextures( 1, &m.texture );
+		releaseMaterial( m );
 		m.texture = m.material.image.isNull() ? 0 : uploadImage( m.material.image, true, true );
+		for ( int i = 0; i < 6; ++i ) // sky boxes: clamped, no mipmaps
+			m.sky[i] = m.material.skyBox[i].isNull() ? 0 : uploadImage( m.material.skyBox[i], false, true );
 	}
 }
 
@@ -326,6 +376,7 @@ void View::paintGL(){
 		uploadLightmaps();
 		m_lightmapsDirty = false;
 	}
+	deleteOrphans();
 	if ( m_texturesDirty ) {
 		uploadTextures();
 		m_texturesDirty = false;
@@ -361,6 +412,9 @@ void View::paintGL(){
 		m_program->setUniformValue( "u_gamma", m_engine.p.hardwareGamma ? m_engine.clampedGamma() : 1.0f );
 		m_program->setUniformValue( "u_overbright", float( 1 << obb ) );
 		m_program->setUniformValue( "u_whiteTexture", m_mode == ViewMode::LightingOnly );
+		m_program->setUniformValue( "u_eye", eye );
+		for ( int i = 0; i < 6; ++i )
+			m_program->setUniformValue( QString( "u_sky%1" ).arg( i ).toLatin1().constData(), 2 + i );
 
 		m_vbo.bind();
 		m_ibo.bind();
@@ -381,8 +435,11 @@ void View::paintGL(){
 				glDepthMask( GL_FALSE );
 				blending = true;
 			}
+			const bool skyBox = m.sky && gm.sky[0] != 0 && gm.sky[1] != 0 && gm.sky[2] != 0 && gm.sky[3] != 0 && gm.sky[4] != 0 && gm.sky[5] != 0;
 			int source = 0;
-			if ( m_mode == ViewMode::Fullbright || m.sky )
+			if ( skyBox )
+				source = 3;
+			else if ( m_mode == ViewMode::Fullbright || m.sky )
 				source = 2;
 			else if ( b.lightmap < 0 || b.lightmap >= int( m_lightmapTextures.size() ) )
 				source = 1;
@@ -393,6 +450,11 @@ void View::paintGL(){
 			glBindTexture( GL_TEXTURE_2D, gm.texture != 0 ? gm.texture : m_checker );
 			glActiveTexture( GL_TEXTURE1 );
 			glBindTexture( GL_TEXTURE_2D, source == 0 ? m_lightmapTextures[b.lightmap] : m_white );
+			if ( skyBox )
+				for ( int i = 0; i < 6; ++i ) {
+					glActiveTexture( GL_TEXTURE2 + i );
+					glBindTexture( GL_TEXTURE_2D, gm.sky[i] );
+				}
 			glDrawElements( GL_TRIANGLES, b.numIndexes, GL_UNSIGNED_INT, reinterpret_cast<const void*>( std::size_t( b.firstIndex ) * sizeof( uint32_t ) ) );
 		}
 		glActiveTexture( GL_TEXTURE0 );

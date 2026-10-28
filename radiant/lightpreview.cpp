@@ -85,6 +85,8 @@ struct Settings
 	int viewMode = 0;
 	CopiedString presetArgs[c_presetCount];
 	CopiedString bspArgs;
+	CopiedString lookArgs;     // q3map2 -light options that change the look; used by every preset
+	bool lookImported = false; // look options were taken from the build menu once
 	int mapOverBrightBits = 2;
 	int overBrightBits = 1;
 	float gamma = 1;
@@ -157,6 +159,15 @@ Material material_for( const std::string& shaderName ){
 		m.invisible = ( flags & ( QER_NODRAW | QER_FOG | QER_CLIP ) ) != 0;
 		if ( shader->getTexture() != nullptr && shader->getTexture()->name != nullptr && *shader->getTexture()->name != '\0' )
 			image = shader->getTexture()->name;
+		if ( m.sky ) { // skyparms far box: <name>_rt _lf _bk _ft _up _dn, in the order tr_sky.c draws them
+			if ( qtexture_t* box = shader->getSkyBox() ) {
+				if ( box->name != nullptr && *box->name != '\0' ) {
+					const char* const suffixes[6] = { "_rt", "_lf", "_bk", "_ft", "_up", "_dn" };
+					for ( int i = 0; i < 6; ++i )
+						m.skyBox[i] = load_image_cached( strip_extension( box->name ) + suffixes[i] );
+				}
+			}
+		}
 		shader->DecRef();
 	}
 	m.image = load_image_cached( strip_extension( image ) );
@@ -180,6 +191,7 @@ class PreviewWindow : public QWidget
 	QWidget* m_settingsPanel;
 	QLineEdit* m_presetEdits[c_presetCount];
 	QLineEdit* m_bspArgsEdit;
+	QLineEdit* m_lookEdit;
 	QSpinBox* m_mapObb;
 	QSpinBox* m_obb;
 	QDoubleSpinBox* m_gamma;
@@ -348,6 +360,9 @@ public:
 		m_followTimer.start();
 
 		resize( 1100, 720 );
+
+		if ( !g_settings.lookImported )
+			m_status->setText( importFromBuildMenu() );
 	}
 
 	void mapChanged(){
@@ -390,15 +405,67 @@ private:
 		m_log->insertPlainText( text );
 	}
 
+	/// Fills the look options and the Final preset from the -light command in the build menu.
+	QString importFromBuildMenu(){
+		bsp_init();
+		build_set_variable( "MonitorAddress", "" );
+		const std::vector<CopiedString> commands = build_construct_all_commands();
+		bsp_shutdown();
+		for ( const CopiedString& command : commands )
+		{
+			QStringList tokens = QProcess::splitCommand( QString::fromUtf8( command.c_str() ) );
+			const int light = tokens.indexOf( "-light" );
+			if ( light < 0 )
+				continue;
+			tokens = tokens.mid( light + 1 );
+			if ( !tokens.isEmpty() && !tokens.last().startsWith( '-' ) )
+				tokens.removeLast(); // the map file
+			std::vector<std::string> args;
+			for ( const QString& t : tokens )
+				args.push_back( t.toStdString() );
+			std::string look, quality;
+			split_light_options( args, look, quality );
+			g_settings.lookArgs = look.c_str();
+			g_settings.presetArgs[c_presetCount - 1] = quality.c_str();
+			g_settings.lookImported = true;
+			m_lookEdit->setText( g_settings.lookArgs.c_str() );
+			m_presetEdits[c_presetCount - 1]->setText( g_settings.presetArgs[c_presetCount - 1].c_str() );
+			return QString( "Imported from the build menu. All presets: %1. Final: %2" )
+			       .arg( look.empty() ? QString( "(none)" ) : QString::fromStdString( look ) )
+			       .arg( quality.empty() ? QString( "(none)" ) : QString::fromStdString( quality ) );
+		}
+		g_settings.lookImported = true;
+		return "No -light command found in the build menu.";
+	}
+
 	QWidget* buildSettingsPanel(){
 		auto* panel = new QWidget;
 		panel->setMinimumWidth( 320 );
 		auto* v = new QVBoxLayout( panel );
 		v->setContentsMargins( 6, 0, 0, 0 );
 		{
-			auto* box = new QGroupBox( "Quality presets (q3map2 -light options)" );
+			auto* box = new QGroupBox( "q3map2 -light options" );
 			v->addWidget( box );
 			auto* form = new QFormLayout( box );
+			m_lookEdit = new QLineEdit( g_settings.lookArgs.c_str() );
+			m_lookEdit->setToolTip( "Options that change how the lighting looks (-gamma, -compensate, -dirty, -dark ...).\n"
+			                        "Used by every quality preset, so the preview matches your bake." );
+			form->addRow( "All presets", m_lookEdit );
+			QObject::connect( m_lookEdit, &QLineEdit::editingFinished, [this](){
+				const CopiedString text( m_lookEdit->text().toUtf8().constData() );
+				if ( !string_equal( text.c_str(), g_settings.lookArgs.c_str() ) ) {
+					g_settings.lookArgs = text;
+					requestCompile( true );
+				}
+			} );
+			auto* import = new QPushButton( "Import from build menu" );
+			import->setToolTip( "Take the options of the -light command in your build menu (the build you ran last).\n"
+			                    "Look options go to \"All presets\"; the speed/quality options become the Final preset." );
+			form->addRow( import );
+			QObject::connect( import, &QPushButton::clicked, [this](){
+				m_status->setText( importFromBuildMenu() );
+				requestCompile( true );
+			} );
 			for ( int i = 0; i < c_presetCount; ++i )
 			{
 				m_presetEdits[i] = new QLineEdit( g_settings.presetArgs[i].c_str() );
@@ -591,6 +658,7 @@ private:
 			                     + QProcess::splitCommand( QString::fromUtf8( g_settings.bspArgs.c_str() ) ) + QStringList{ m_mapPath } } );
 		}
 		m_steps.push_back( { "light", program, base + QStringList{ "-light" }
+		                     + QProcess::splitCommand( QString::fromUtf8( g_settings.lookArgs.c_str() ) )
 		                     + QProcess::splitCommand( QString::fromUtf8( g_settings.presetArgs[quality].c_str() ) ) + QStringList{ m_bspPath } } );
 
 		m_log->clear();
@@ -770,6 +838,8 @@ void LightPreview_Construct(){
 	GlobalPreferenceSystem().registerPreference( key( "ViewMode" ), IntImportStringCaller( g_settings.viewMode ), IntExportStringCaller( g_settings.viewMode ) );
 	for ( int i = 0; i < c_presetCount; ++i )
 		GlobalPreferenceSystem().registerPreference( key( "Preset" + std::to_string( i ) ), CopiedStringImportStringCaller( g_settings.presetArgs[i] ), CopiedStringExportStringCaller( g_settings.presetArgs[i] ) );
+	GlobalPreferenceSystem().registerPreference( key( "LookArgs" ), CopiedStringImportStringCaller( g_settings.lookArgs ), CopiedStringExportStringCaller( g_settings.lookArgs ) );
+	GlobalPreferenceSystem().registerPreference( key( "LookImported" ), BoolImportStringCaller( g_settings.lookImported ), BoolExportStringCaller( g_settings.lookImported ) );
 	GlobalPreferenceSystem().registerPreference( key( "BspArgs" ), CopiedStringImportStringCaller( g_settings.bspArgs ), CopiedStringExportStringCaller( g_settings.bspArgs ) );
 	GlobalPreferenceSystem().registerPreference( key( "MapOverBrightBits" ), IntImportStringCaller( g_settings.mapOverBrightBits ), IntExportStringCaller( g_settings.mapOverBrightBits ) );
 	GlobalPreferenceSystem().registerPreference( key( "OverBrightBits" ), IntImportStringCaller( g_settings.overBrightBits ), IntExportStringCaller( g_settings.overBrightBits ) );

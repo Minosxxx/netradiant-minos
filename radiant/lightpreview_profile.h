@@ -152,6 +152,51 @@ inline const std::vector<GameProfile>& game_profiles(){
 	return profiles;
 }
 
+/// Splits the options of a q3map2 -light command into those that change how lighting looks
+/// (kept for every preview quality) and those that only trade speed for quality (replaced by presets).
+/// \p args are the tokens after "-light", without the map file.
+inline void split_light_options( const std::vector<std::string>& args, std::string& look, std::string& quality ){
+	static const char* const qualityFlags[] = { "-fast", "-faster", "-fastbounce", "-fastgrid", "-fastallocate", "-slowallocate",
+	                                            "-cheap", "-cheapgrid", "-filter", "-nogrid", "-bouncegrid", "-fastlightmapsearch" };
+	static const char* const qualityWithValue[] = { "-samples", "-super", "-bounce", "-threads" };
+	static const char* const dropWithValue[] = { "-connect" };
+	static const char* const drop[] = { "-v", "-light" };
+	look.clear();
+	quality.clear();
+	const auto append = []( std::string& to, const std::string& token ){
+		if ( !to.empty() )
+			to += ' ';
+		to += token.find_first_of( " \t" ) != std::string::npos ? '"' + token + '"' : token;
+	};
+	const auto in = []( const std::string& token, const auto& list ){
+		for ( const char* f : list )
+			if ( token == f )
+				return true;
+		return false;
+	};
+	for ( std::size_t i = 0; i < args.size(); ++i )
+	{
+		const std::string& a = args[i];
+		if ( in( a, drop ) )
+			continue;
+		if ( in( a, dropWithValue ) ) {
+			++i;
+			continue;
+		}
+		if ( in( a, qualityFlags ) ) {
+			append( quality, a );
+		}
+		else if ( in( a, qualityWithValue ) ) {
+			append( quality, a );
+			if ( i + 1 < args.size() )
+				append( quality, args[++i] );
+		}
+		else{
+			append( look, a );
+		}
+	}
+}
+
 /// Picks the profile for a gamepack's basegame folder; falls back to the first (Quake 3).
 inline const GameProfile& profile_for_basegame( const char* basegame ){
 	for ( const GameProfile& p : game_profiles() )

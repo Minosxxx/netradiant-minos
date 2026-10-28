@@ -39,6 +39,13 @@ struct Material
 	float alpha = 1.0f;
 	bool alphaTest = false;
 	bool invisible = false; // not drawn (fog, hint ...)
+	QImage skyBox[6];       // skyparms far box, in tr_sky.c axis order: _rt _lf _bk _ft _up _dn
+	bool hasSkyBox() const {
+		for ( const QImage& i : skyBox )
+			if ( i.isNull() )
+				return false;
+		return true;
+	}
 };
 
 struct CameraState
@@ -96,12 +103,15 @@ private:
 	{
 		Material material;
 		GLuint texture = 0;
+		GLuint sky[6] = { 0, 0, 0, 0, 0, 0 };
 	};
 
 	void uploadMap();
 	void uploadLightmaps();
 	void uploadTextures();
 	void freeGpu();
+	void releaseMaterial( GpuMaterial& m ); // queues its textures for deletion
+	void deleteOrphans();                   // needs a current context
 	GLuint uploadImage( const QImage& image, bool mipmaps, bool engineScale );
 	void tick();
 
@@ -122,6 +132,7 @@ private:
 	std::vector<Batch> m_batches;
 	std::vector<GLuint> m_lightmapTextures;
 	std::vector<GpuMaterial> m_materials;
+	std::vector<GLuint> m_orphanTextures;
 	GLuint m_white = 0;
 	GLuint m_checker = 0;
 
