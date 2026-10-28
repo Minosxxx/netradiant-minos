@@ -960,6 +960,7 @@ void create_view_menu( QMenuBar *menubar, MainFrame::EViewStyle style ){
 	create_menu_item_with_mnemonic( menu, "Model Browser", "ToggleModelBrowser" );
 	create_menu_item_with_mnemonic( menu, "Entity Inspector", "ToggleEntityInspector" );
 	create_menu_item_with_mnemonic( menu, "&Surface Inspector", "SurfaceInspector" );
+	create_menu_item_with_mnemonic( menu, "&Lighting Preview", "LightPreview" );
 	create_menu_item_with_mnemonic( menu, "Entity List", "EntityList" );
 
 	menu->addSeparator();

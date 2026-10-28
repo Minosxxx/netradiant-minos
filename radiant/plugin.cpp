@@ -63,6 +63,7 @@
 #include "mainframe.h"
 #include "build.h"
 #include "mru.h"
+#include "lightpreview.h"
 #include "surfacedialog.h"
 #include "groupdialog.h"
 #include "patchdialog.h"
@@ -258,6 +259,7 @@ public:
 		MainFrame_Construct();
 		GroupDialog_Construct();
 		SurfaceInspector_Construct();
+		LightPreview_Construct();
 		CamWnd_Construct();
 		XYWindow_Construct();
 		BuildMonitor_Construct();

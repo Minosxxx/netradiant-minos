@@ -468,6 +468,17 @@ void project_verify( Project& project, Tools& tools ){
 #endif
 }
 
+/// Evaluates a build tool variable (e.g. "q3map2") with the current build variables.
+bool build_evaluate_tool( const char* name, CopiedString& output ){
+	const auto it = g_build_tools.find( name );
+	if ( it == g_build_tools.end() )
+		return false;
+	StringBuffer buffer;
+	it->second.evaluate( buffer );
+	output = buffer.c_str();
+	return true;
+}
+
 std::vector<CopiedString> build_construct_commands( size_t buildIdx ){
 	for ( const auto& [ name, tool ] : g_build_tools )
 	{

@@ -1049,6 +1049,14 @@ void CamWnd_reconstructStatic(){
 
 static CamWnd* g_camwnd = 0;
 
+CamWnd* GlobalCamera_getCamWndPtr(){
+	return g_camwnd;
+}
+
+float Camera_getFieldOfView(){
+	return camera_t::fieldOfView;
+}
+
 void GlobalCamera_setCamWnd( CamWnd& camwnd ){
 	g_camwnd = &camwnd;
 }

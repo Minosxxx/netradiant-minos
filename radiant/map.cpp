@@ -1323,6 +1323,13 @@ bool Map_SaveRegion( const char *filename ){
 	return MapResource_saveFile( MapFormat_forFile( filename ), GlobalSceneGraph().root(), Map_Traverse_Region, filename );
 }
 
+/// Writes the map (or the active region) to \p filename without changing the map's name or modified state.
+bool Map_ExportForPreview( const char* filename ){
+	if ( g_region_active )
+		return Map_SaveRegion( filename );
+	return MapResource_saveFile( MapFormat_forFile( filename ), GlobalSceneGraph().root(), Map_Traverse, filename );
+}
+
 
 inline void exclude_node( scene::Node& node, bool exclude ){
 	exclude

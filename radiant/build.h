@@ -28,6 +28,7 @@ void build_set_variable( const char* name, const char* value );
 void build_clear_variables();
 
 std::vector<CopiedString> build_construct_commands( size_t buildIdx );
+bool build_evaluate_tool( const char* name, CopiedString& output );
 
 void DoBuildMenu();
 

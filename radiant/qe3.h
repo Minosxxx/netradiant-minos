@@ -62,3 +62,4 @@ extern SimpleCounter g_patchCount;
 extern SimpleCounter g_entityCount;
 
 void bsp_init();
+void bsp_shutdown();

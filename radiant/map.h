@@ -109,6 +109,7 @@ void Map_Free();
 void Map_RegionOff();
 
 bool Map_SaveRegion( const char* filename );
+bool Map_ExportForPreview( const char* filename );
 
 void Map_ImportSelected( class TextInputStream& in, const MapFormat& format );
 void Map_ExportSelected( class TextOutputStream& out, const MapFormat& format );

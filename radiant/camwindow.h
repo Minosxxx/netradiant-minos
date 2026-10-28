@@ -45,6 +45,8 @@ void CamWnd_registerShortcuts();
 
 void GlobalCamera_Benchmark();
 
+CamWnd* GlobalCamera_getCamWndPtr(); // may be null
+float Camera_getFieldOfView();     // horizontal, degrees
 const Vector3& Camera_getOrigin( CamWnd& camwnd );
 void Camera_setOrigin( CamWnd& camwnd, const Vector3& origin );
 
