@@ -823,11 +823,28 @@ void SurfaceInspector::BuildDialog(){
 				grid->addWidget( new QLabel( "Patch" ), 3, 0 );
 			}
 			{
-				auto *b = new QPushButton( "Hotspot" );
+				grid->addWidget( new QLabel( "Hotspot:" ), 4, 0 );
+			}
+			{
+				auto *b = new QPushButton( "Apply" );
 				b->setMinimumWidth( 10 );
 				b->setToolTip( "Fit each selected face to the best matching rectangle of its texture's .hotspot sheet\n(Ctrl+Shift+H)" );
-				grid->addWidget( b, 4, 0, 1, 2 );
+				grid->addWidget( b, 4, 1 );
 				QObject::connect( b, &QAbstractButton::clicked, Select_HotspotTexture );
+			}
+			{
+				auto *b = new QPushButton( "Grouped" );
+				b->setMinimumWidth( 10 );
+				b->setToolTip( "Like Apply, but selected faces with the same texture facing the same way\nare treated as one surface (Ctrl+Alt+H)" );
+				grid->addWidget( b, 4, 2 );
+				QObject::connect( b, &QAbstractButton::clicked, Select_HotspotTextureGrouped );
+			}
+			{
+				auto *b = new QPushButton( "Edit..." );
+				b->setMinimumWidth( 10 );
+				b->setToolTip( "Open the hotspot rectangle editor" );
+				grid->addWidget( b, 4, 3 );
+				QObject::connect( b, &QAbstractButton::clicked, HotspotEditor_show );
 			}
 			{
 				auto *b = new QPushButton( "Natural" );

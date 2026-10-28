@@ -9,7 +9,10 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace hotspot
@@ -198,6 +201,109 @@ inline Mapping map( const Definition& def, const Rect& rect, double imageW, doub
 	m.st[1][0] = s1 / W; m.st[1][1] = t0 / H; // top-right
 	m.st[2][0] = s0 / W; m.st[2][1] = t2 / H; // bottom-left
 	return m;
+}
+
+inline const char* mode_name( Mode mode ){
+	switch ( mode )
+	{
+	case Mode::TileH: return "tile_h";
+	case Mode::TileV: return "tile_v";
+	default: return "fit";
+	}
+}
+
+/// Serialises a definition in the .hotspot format.
+inline std::string write( const Definition& def ){
+	std::string s = "# Hotspot rects, written by the NetRadiant hotspot editor\n"
+	                "#   rect <x> <y> <w> <h> [fit|tile_h|tile_v]   (pixels, origin top-left)\n";
+	char line[160];
+	if ( def.width > 0 && def.height > 0 ) {
+		std::snprintf( line, sizeof( line ), "size %g %g\n", def.width, def.height );
+		s += line;
+	}
+	std::snprintf( line, sizeof( line ), "inset %g\n\n", def.inset );
+	s += line;
+	for ( const Rect& r : def.rects ){
+		std::snprintf( line, sizeof( line ), "rect %g %g %g %g %s\n", r.x, r.y, r.w, r.h, mode_name( r.mode ) );
+		s += line;
+	}
+	return s;
+}
+
+/// Finds hotspot rects in a sheet whose cells are separated by dark gutters.
+/// \p luma is width*height brightness values (0..255), row-major, top row first.
+/// The sheet is split recursively: first into horizontal bands at fully dark rows, then each
+/// band into cells at fully dark columns (and so on), so nested layouts work.
+/// Cells spanning the whole width become tile_h, whole height tile_v, everything else fit.
+inline std::vector<Rect> autodetect( const unsigned char* luma, int width, int height, int darkThreshold = 40 ){
+	std::vector<Rect> out;
+	if ( luma == nullptr || width <= 0 || height <= 0 )
+		return out;
+	const double gutterFraction = 0.97; // a line is a gutter if this share of its pixels is dark
+	const int minCell = 4;
+
+	struct Region { int x, y, w, h; };
+	// returns runs of non-gutter lines along one axis of a region
+	const auto runs = [&]( const Region& r, bool rows ){
+		std::vector<std::pair<int, int>> result; // start, length
+		const int count = rows ? r.h : r.w;
+		const int span = rows ? r.w : r.h;
+		int start = -1;
+		for ( int i = 0; i <= count; ++i )
+		{
+			bool gutter = true;
+			if ( i < count ) {
+				int dark = 0;
+				for ( int j = 0; j < span; ++j ){
+					const int px = rows ? r.x + j : r.x + i;
+					const int py = rows ? r.y + i : r.y + j;
+					dark += luma[py * width + px] < darkThreshold;
+				}
+				gutter = dark >= gutterFraction * span;
+			}
+			if ( !gutter && start < 0 )
+				start = i;
+			if ( gutter && start >= 0 ) {
+				if ( i - start >= minCell )
+					result.emplace_back( start, i - start );
+				start = -1;
+			}
+		}
+		return result;
+	};
+
+	std::vector<Region> stack{ { 0, 0, width, height } };
+	for ( int guard = 0; !stack.empty() && guard < 4096; ++guard )
+	{
+		const Region r = stack.back();
+		stack.pop_back();
+		const auto bands = runs( r, true );
+		if ( bands.size() > 1 || ( bands.size() == 1 && bands[0].second < r.h ) ) {
+			for ( const auto& b : bands )
+				stack.push_back( { r.x, r.y + b.first, r.w, b.second } );
+			continue;
+		}
+		const auto cells = runs( r, false );
+		if ( cells.size() > 1 || ( cells.size() == 1 && cells[0].second < r.w ) ) {
+			for ( const auto& c : cells )
+				stack.push_back( { r.x + c.first, r.y, c.second, r.h } );
+			continue;
+		}
+		if ( bands.empty() || cells.empty() )
+			continue; // all gutter
+		Rect rect{ double( r.x ), double( r.y ), double( r.w ), double( r.h ), Mode::Fit };
+		const bool fullW = r.w >= 0.98 * width, fullH = r.h >= 0.98 * height;
+		if ( fullW && !fullH )
+			rect.mode = Mode::TileH;
+		else if ( fullH && !fullW )
+			rect.mode = Mode::TileV;
+		out.push_back( rect );
+	}
+	// reading order: top to bottom, then left to right
+	for ( std::size_t i = 1; i < out.size(); ++i )
+		for ( std::size_t j = i; j > 0 && ( out[j].y < out[j - 1].y || ( out[j].y == out[j - 1].y && out[j].x < out[j - 1].x ) ); --j )
+			std::swap( out[j], out[j - 1] );
+	return out;
 }
 
 } // namespace hotspot
