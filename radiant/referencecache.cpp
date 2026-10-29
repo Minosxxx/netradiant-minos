@@ -497,7 +497,10 @@ struct ModelResource : public Resource
 		         || !path_equal( rootPath( m_originalName.c_str() ), m_path.c_str() ) ); // OR absolute vfs-root changed
 	}
 	void refresh(){
-		if ( isModified() ) {
+		reload( false );
+	}
+	void reload( bool force ){
+		if ( force || isModified() ) {
 			flush();
 			unrealise();
 			realise();
@@ -608,13 +611,13 @@ public:
 			ModelCache_clear();
 		}
 	}
-	void refresh(){
+	void refresh( bool force = false ){
 		ModelReferencesSnapshot snapshot( m_references );
 		for ( ModelReferencesSnapshot::iterator i = snapshot.begin(); i != snapshot.end(); ++i )
 		{
 			ModelResource* resource = ( *( *i ) ).value.get();
 			if ( !resource->isMap() ) {
-				resource->refresh();
+				resource->reload( force );
 			}
 		}
 	}
@@ -656,9 +659,17 @@ bool References_Saved(){
 	return true;
 }
 
+#include "lightpreview.h"
+
+/// Reloads every model from disk. Timestamps alone miss models inside .pk3s and files rewritten within
+/// the same second, so all of them are reloaded; the lighting preview recompiles its BSP afterwards,
+/// because models are baked into it and the map text itself didn't change.
 void RefreshReferences(){
-	ScopeDisableScreenUpdates disableScreenUpdates( "Processing...", "Refreshing Models" );
-	g_referenceCache.refresh();
+	{
+		ScopeDisableScreenUpdates disableScreenUpdates( "Processing...", "Refreshing Models" );
+		g_referenceCache.refresh( true );
+	}
+	LightPreview_modelsChanged();
 }
 
 

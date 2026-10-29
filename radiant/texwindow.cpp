@@ -26,6 +26,7 @@
 //
 
 #include "texwindow.h"
+#include "referencecache.h"
 
 #include "debugging/debugging.h"
 
@@ -1742,7 +1743,7 @@ QWidget* TextureBrowser_constructWindow( QWidget* toplevel ){
 
 		toolbar_append_button( toolbar, "Find / Replace...", "texbro_gtk-find-and-replace.png", "FindReplaceTextures" );
 
-		toolbar_append_button( toolbar, "Flush & Reload Shaders", "texbro_refresh.png", "RefreshShaders" );
+		toolbar_append_button( toolbar, "Flush & Reload Shaders and Models", "texbro_refresh.png", "RefreshShaders" );
 	}
 	{	// filter entry
 		QLineEdit *entry = g_TexBro.m_filter_entry = new Filter_QLineEdit;
@@ -1859,6 +1860,7 @@ void RefreshShaders(){
 	ScopeDisableScreenUpdates disableScreenUpdates( "Processing...", "Loading Shaders" );
 	GlobalShaderSystem().refresh();
 	TextureBrowser_constructTreeStore(); /* texturebrowser tree update on vfs restart */
+	RefreshReferences(); /* models too: re-exported .md3 / .ase files show up without reopening the map */
 	UpdateAllWindows();
 }
 

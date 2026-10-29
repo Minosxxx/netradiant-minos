@@ -212,6 +212,7 @@ class PreviewWindow : public QWidget
 	QElapsedTimer m_stepClock;
 	QElapsedTimer m_totalClock;
 	QStringList m_stepTimes;
+	bool m_modelsDirty = false;     // model files reloaded: the next compile must run -bsp
 	bool m_leaked = false;          // the last -bsp stage reported a leak (kept through -onlyents relights)
 	QWidget* m_leakBar = nullptr;
 
@@ -411,6 +412,13 @@ public:
 			return;
 		}
 		startCompile( forced );
+	}
+
+	/// Model files were reloaded: their geometry is baked into the BSP, but the map text is unchanged.
+	void modelsChanged(){
+		m_modelsDirty = true;
+		if ( isVisible() )
+			mapChanged();
 	}
 
 	void showAndCompile(){
@@ -662,7 +670,7 @@ private:
 		file.close();
 
 		const int quality = m_quality->currentIndex();
-		if ( !forced && m_bspValid && m_runFullHash == m_lastFullHash && quality == m_lastQuality ) {
+		if ( !forced && !m_modelsDirty && m_bspValid && m_runFullHash == m_lastFullHash && quality == m_lastQuality ) {
 			m_view->setOverlayText( QString() );
 			return; // nothing changed
 		}
@@ -678,7 +686,7 @@ private:
 		m_steps.clear();
 		// while the map leaks, always run the full BSP stage, so fixing the leak (often by deleting or
 		// moving a point entity, which -onlyents would skip) clears the warning
-		const bool entitiesOnly = !m_leaked && m_bspValid && m_runGeometryHash == m_lastGeometryHash && QFileInfo::exists( m_bspPath );
+		const bool entitiesOnly = !m_leaked && !m_modelsDirty && m_bspValid && m_runGeometryHash == m_lastGeometryHash && QFileInfo::exists( m_bspPath );
 		if ( entitiesOnly ) {
 			m_steps.push_back( { "entities", program, base + QStringList{ "-bsp", "-onlyents", m_mapPath } } );
 		}
@@ -690,6 +698,7 @@ private:
 		                     + QProcess::splitCommand( QString::fromUtf8( g_settings.lookArgs.c_str() ) )
 		                     + QProcess::splitCommand( QString::fromUtf8( g_settings.presetArgs[quality].c_str() ) ) + QStringList{ m_bspPath } } );
 
+		m_modelsDirty = false;
 		m_log->clear();
 		m_stepTimes.clear();
 		m_step = 0;
@@ -851,6 +860,11 @@ void LightPreview_show(){
 	if ( g_window == nullptr )
 		g_window = new PreviewWindow;
 	g_window->showAndCompile();
+}
+
+void LightPreview_modelsChanged(){
+	if ( g_window != nullptr )
+		g_window->modelsChanged();
 }
 
 void LightPreview_Construct(){
