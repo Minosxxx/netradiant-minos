@@ -140,6 +140,7 @@ public:
 	QComboBox* addCombo( QGridLayout *grid, const char* name, StringArrayRange values, const IntImportCallback& importCallback, const IntExportCallback& exportCallback );
 	QComboBox* addCombo( QGridLayout *grid, const char* name, int& data, StringArrayRange values );
 	void addSlider( QGridLayout *grid, const char* name, int& data, int lower, int upper, int step_increment, int page_increment );
+	void addSlider( QGridLayout *grid, const char* name, int lower, int upper, int step_increment, int page_increment, const IntImportCallback& importCallback, const IntExportCallback& exportCallback );
 	void addSlider( QGridLayout *grid, const char* name, float& data, double lower, double upper, double step_increment, double page_increment );
 	void addRadio( QGridLayout *grid, const char* name, StringArrayRange names, const IntImportCallback& importCallback, const IntExportCallback& exportCallback );
 	void addRadio( QGridLayout *grid, const char* name, int& data, StringArrayRange names );

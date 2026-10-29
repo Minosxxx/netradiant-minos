@@ -42,5 +42,13 @@ QPixmap new_local_image( const char* filename ){
 
 QIcon new_local_icon( const char* filename ){
 	const auto fullPath = StringStream( g_bitmapsPath, filename );
-	return QIcon( fullPath.c_str() );
+	// Qt never enlarges raster icons, so supply crisp 2x/3x/4x versions for big toolbar icon sizes
+	// (Preferences > Layout > Icon size); in-between sizes are scaled down from the next larger one
+	const QPixmap pixmap( fullPath.c_str() );
+	if ( pixmap.isNull() )
+		return QIcon( fullPath.c_str() );
+	QIcon icon( pixmap );
+	for ( int factor = 2; factor <= 4; ++factor )
+		icon.addPixmap( pixmap.scaled( pixmap.size() * factor, Qt::KeepAspectRatio, Qt::FastTransformation ) );
+	return icon;
 }

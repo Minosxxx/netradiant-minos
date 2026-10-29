@@ -434,6 +434,14 @@ void Dialog::addSlider( QGridLayout* grid, const char* name, int& data, int lowe
 	DialogGrid_packRow( grid, row.m_layout, name );
 }
 
+void Dialog::addSlider( QGridLayout* grid, const char* name, int lower, int upper, int step_increment, int page_increment, const IntImportCallback& importCallback, const IntExportCallback& exportCallback ){
+	DialogSliderRow row( lower, upper, step_increment, page_increment );
+
+	AddIntSliderData( *row.m_slider, importCallback, exportCallback );
+
+	DialogGrid_packRow( grid, row.m_layout, name );
+}
+
 void Dialog::addSlider( QGridLayout* grid, const char* name, float& data, double lower, double upper, double step_increment, double page_increment ){
 	DialogSliderRow row( lower, upper, step_increment, page_increment );
 

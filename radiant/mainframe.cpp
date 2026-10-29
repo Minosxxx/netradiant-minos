@@ -2001,6 +2001,40 @@ void GlobalGL_sharedContextDestroyed(){
 }
 
 
+// ---- toolbar icon size (for high-DPI screens)
+
+int g_iconScale = 100; // percent of the style's toolbar icon size
+
+/// Sets a toolbar's icon size from its original (style) size and g_iconScale.
+void Toolbar_applyIconScale( QToolBar* toolbar ){
+	QVariant base = toolbar->property( "nrcBaseIconSize" );
+	if ( !base.isValid() ) {
+		base = toolbar->iconSize();
+		toolbar->setProperty( "nrcBaseIconSize", base );
+	}
+	toolbar->setIconSize( base.toSize() * g_iconScale / 100 );
+}
+
+/// Applies the icon size to every toolbar, including ones created later (floating windows, browsers).
+class ToolbarIconScaler : public QObject
+{
+protected:
+	bool eventFilter( QObject* obj, QEvent* event ) override {
+		if ( event->type() == QEvent::Polish )
+			if ( auto* toolbar = qobject_cast<QToolBar*>( obj ) )
+				Toolbar_applyIconScale( toolbar );
+		return QObject::eventFilter( obj, event );
+	}
+};
+
+void IconScale_import( int value ){
+	g_iconScale = std::clamp( value, 50, 400 );
+	for ( QWidget* widget : QApplication::allWidgets() )
+		if ( auto* toolbar = qobject_cast<QToolBar*>( widget ) )
+			Toolbar_applyIconScale( toolbar );
+}
+typedef FreeCaller1<int, IconScale_import> IconScaleImportCaller;
+
 void Layout_constructPreferences( PreferencesPage& page ){
 	{
 		const char* layouts[] = { "window1.png", "window2.png", "window3.png", "window4.png" };
@@ -2016,6 +2050,7 @@ void Layout_constructPreferences( PreferencesPage& page ){
 	    LatchedImportCaller( g_Layout_enableDetachableMenus ),
 	    BoolExportCaller( g_Layout_enableDetachableMenus.m_latched )
 	);
+	page.appendSlider( "Icon size (%)", 50, 400, 25, 50, IntImportCallback( IconScaleImportCaller() ), IntExportCallback( IntExportCaller( g_iconScale ) ) );
 	page.appendCheckBox(
 	    "", "Built-In Group Dialog",
 	    LatchedImportCaller( g_Layout_builtInGroupDialog ),
@@ -2077,6 +2112,11 @@ void MainFrame_Construct(){
 	XYShow_registerCommands();
 
 	GlobalPreferenceSystem().registerPreference( "DetachableMenus", makeBoolStringImportCallback( LatchedAssignCaller( g_Layout_enableDetachableMenus ) ), BoolExportStringCaller( g_Layout_enableDetachableMenus.m_latched ) );
+	GlobalPreferenceSystem().registerPreference( "IconScale", IntImportStringCaller( g_iconScale ), IntExportStringCaller( g_iconScale ) );
+	{
+		static ToolbarIconScaler scaler;
+		qApp->installEventFilter( &scaler );
+	}
 	GlobalPreferenceSystem().registerPreference( "QE4StyleWindows", makeIntStringImportCallback( LatchedAssignCaller( g_Layout_viewStyle ) ), IntExportStringCaller( g_Layout_viewStyle.m_latched ) );
 	GlobalPreferenceSystem().registerPreference( "BuiltInGroupDialog", makeBoolStringImportCallback( LatchedAssignCaller( g_Layout_builtInGroupDialog ) ), BoolExportStringCaller( g_Layout_builtInGroupDialog.m_latched ) );
 	GlobalPreferenceSystem().registerPreference( "OpenGLFont", CopiedStringImportStringCaller( g_OpenGLFont ), CopiedStringExportStringCaller( g_OpenGLFont ) );

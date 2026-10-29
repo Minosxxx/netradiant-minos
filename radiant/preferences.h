@@ -60,6 +60,9 @@ public:
 	void appendSlider( const char* name, int& data, int lower, int upper, int step_increment, int page_increment ){
 		m_dialog.addSlider( m_grid, name, data, lower, upper, step_increment, page_increment );
 	}
+	void appendSlider( const char* name, int lower, int upper, int step_increment, int page_increment, const IntImportCallback& importCallback, const IntExportCallback& exportCallback ){
+		m_dialog.addSlider( m_grid, name, lower, upper, step_increment, page_increment, importCallback, exportCallback );
+	}
 	void appendSlider( const char* name, float& data, double lower, double upper, double step_increment, double page_increment ){
 		m_dialog.addSlider( m_grid, name, data, lower, upper, step_increment, page_increment );
 	}
