@@ -79,10 +79,16 @@ bool face_axes( const DoubleVector3& n, DoubleVector3& u, DoubleVector3& v ){
 	return true;
 }
 
+/// Fit modes that ignore .hotspot files and use the whole texture with square texels.
+enum class WholeTexture { None, FitHeight, FitWidth };
+
 class HotspotApplier
 {
 	std::map<std::string, CachedDefinition> m_cache;
 public:
+	WholeTexture m_whole = WholeTexture::None;
+	float m_repeats = 1;           // texture repeats across the fitted dimension (WholeTexture modes)
+	std::size_t m_defaulted = 0;   // faces without a .hotspot file that were tiled horizontally
 	std::size_t m_done = 0;
 	std::size_t m_groups = 0;
 	std::size_t m_noDefinition = 0;
@@ -115,12 +121,21 @@ public:
 	/// Textures \p faces as one surface. All faces must share a shader and face the same way.
 	void applyGroup( const std::vector<Face*>& faces ){
 		Face& first = *faces.front();
-		const CachedDefinition& cached = definitionFor( first );
-		if ( !cached.found ) {
-			m_noDefinition += faces.size();
-			m_missing[first.GetShader()] = true;
-			return;
+		const std::size_t imageW = first.getShader().width();
+		const std::size_t imageH = first.getShader().height();
+
+		// whole texture as one rect: explicit fit modes, or hotspot on a texture without a .hotspot file
+		hotspot::Definition whole;
+		const CachedDefinition* cached = m_whole == WholeTexture::None ? &definitionFor( first ) : nullptr;
+		if ( cached == nullptr || !cached->found ) {
+			const double r = std::max( 0.01f, m_repeats );
+			const bool fitWidth = m_whole == WholeTexture::FitWidth;
+			whole.rects.push_back( { 0, 0, double( imageW ) * ( fitWidth ? r : 1 ), double( imageH ) * ( fitWidth ? 1 : r ),
+			                         fitWidth ? hotspot::Mode::TileV : hotspot::Mode::TileH } );
+			if ( cached != nullptr )
+				m_defaulted += faces.size();
 		}
+		const hotspot::Definition& def = ( cached != nullptr && cached->found ) ? cached->def : whole;
 
 		const DoubleVector3 n = first.plane3().normal();
 		DoubleVector3 u, v;
@@ -154,14 +169,11 @@ public:
 		// equally good rects (e.g. two identical narrow shells on the sheet)
 		const unsigned int variation = unsigned( std::lround( std::fabs( centre.x() * 0.37 + centre.y() * 0.61 + centre.z() * 0.89 ) ) / 8 );
 
-		const hotspot::Definition& def = cached.def;
 		const int index = hotspot::pick( def, uMax - uMin, vMax - vMin, variation );
 		if ( index < 0 ) {
 			m_degenerate += faces.size();
 			return;
 		}
-		const std::size_t imageW = first.getShader().width();
-		const std::size_t imageH = first.getShader().height();
 		const hotspot::Mapping m = hotspot::map( def, def.rects[index], double( imageW ), double( imageH ), uMin, uMax, vMin, vMax );
 		const DoubleVector3 st[3] = { DoubleVector3( m.st[0][0], m.st[0][1], 0 ),
 		                              DoubleVector3( m.st[1][0], m.st[1][1], 0 ),
@@ -208,7 +220,7 @@ public:
 	}
 };
 
-void hotspot_apply( bool grouped ){
+void hotspot_apply( bool grouped, WholeTexture whole = WholeTexture::None, float repeats = 1 ){
 	std::vector<Face*> faces;
 	if ( GlobalSelectionSystem().Mode() != SelectionSystem::eComponent ) {
 		Scene_ForEachSelectedBrush_ForEachFace( GlobalSceneGraph(), FaceCollect( faces ) );
@@ -219,8 +231,12 @@ void hotspot_apply( bool grouped ){
 		return;
 	}
 
-	UndoableCommand undo( grouped ? "hotspotTextureGrouped" : "hotspotTexture" );
+	UndoableCommand undo( whole == WholeTexture::FitHeight ? "textureFitHeightKeepAspect"
+	                    : whole == WholeTexture::FitWidth ? "textureFitWidthKeepAspect"
+	                    : grouped ? "hotspotTextureGrouped" : "hotspotTexture" );
 	HotspotApplier applier;
+	applier.m_whole = whole;
+	applier.m_repeats = repeats;
 
 	if ( grouped ) {
 		// group by texture + facing direction
@@ -249,16 +265,18 @@ void hotspot_apply( bool grouped ){
 			applier.applyGroup( { face } );
 	}
 
+	if ( whole != WholeTexture::None ) {
+		SceneChangeNotify();
+		return;
+	}
 	globalOutputStream() << "Hotspot: " << applier.m_done << " face(s) textured";
 	if ( grouped )
 		globalOutputStream() << " in " << applier.m_groups << " group(s)";
-	if ( applier.m_noDefinition != 0 )
-		globalOutputStream() << ", " << applier.m_noDefinition << " skipped (no .hotspot file)";
+	if ( applier.m_defaulted != 0 )
+		globalOutputStream() << ", " << applier.m_defaulted << " without a .hotspot file tiled horizontally";
 	if ( applier.m_degenerate != 0 )
 		globalOutputStream() << ", " << applier.m_degenerate << " skipped (degenerate)";
 	globalOutputStream() << "\n";
-	for ( const auto& missing : applier.m_missing )
-		globalOutputStream() << "  no hotspot rects for " << missing.first.c_str() << " (expected " << Hotspot_stripExtension( missing.first.c_str() ).c_str() << ".hotspot)\n";
 
 	SceneChangeNotify();
 }
@@ -273,8 +291,22 @@ void Select_HotspotTextureGrouped(){
 	hotspot_apply( true );
 }
 
+void Select_FitTextureKeepAspect( bool height, float repeats ){
+	hotspot_apply( false, height ? WholeTexture::FitHeight : WholeTexture::FitWidth, repeats );
+}
+
+void Select_FitHeightKeepAspect(){
+	Select_FitTextureKeepAspect( true, 1 );
+}
+
+void Select_FitWidthKeepAspect(){
+	Select_FitTextureKeepAspect( false, 1 );
+}
+
 void Hotspot_registerCommands(){
 	GlobalCommands_insert( "HotspotTexture", FreeCaller<Select_HotspotTexture>(), QKeySequence( "Ctrl+Shift+H" ) );
 	GlobalCommands_insert( "HotspotTextureGrouped", FreeCaller<Select_HotspotTextureGrouped>(), QKeySequence( "Ctrl+Alt+H" ) );
 	GlobalCommands_insert( "HotspotEditor", FreeCaller<HotspotEditor_show>() );
+	GlobalCommands_insert( "FitTextureHeightKeepAspect", FreeCaller<Select_FitHeightKeepAspect>() );
+	GlobalCommands_insert( "FitTextureWidthKeepAspect", FreeCaller<Select_FitWidthKeepAspect>() );
 }

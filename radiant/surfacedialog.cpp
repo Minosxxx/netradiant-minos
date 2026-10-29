@@ -457,6 +457,16 @@ void SurfaceInspector_FaceFitHeight(){
 	Select_FitTexture( 0, getSurfaceInspector().m_fitVertical );
 }
 
+void SurfaceInspector_FitWidthKeepAspect(){
+	getSurfaceInspector().exportData();
+	Select_FitTextureKeepAspect( false, getSurfaceInspector().m_fitHorizontal );
+}
+
+void SurfaceInspector_FitHeightKeepAspect(){
+	getSurfaceInspector().exportData();
+	Select_FitTextureKeepAspect( true, getSurfaceInspector().m_fitVertical );
+}
+
 void SurfaceInspector_FaceFitWidthOnly(){
 	UndoableCommand undo( "textureAutoFitWidthOnly" );
 	getSurfaceInspector().exportData();
@@ -845,6 +855,25 @@ void SurfaceInspector::BuildDialog(){
 				b->setToolTip( "Open the hotspot rectangle editor" );
 				grid->addWidget( b, 4, 3 );
 				QObject::connect( b, &QAbstractButton::clicked, HotspotEditor_show );
+			}
+			{
+				grid->addWidget( new QLabel( "Keep aspect:" ), 5, 0, 1, 2 );
+			}
+			{
+				auto *b = new QPushButton( "Width" );
+				b->setMinimumWidth( 10 );
+				b->setToolTip( "Fit the texture's width to each face (repeated as many times as the left Fit box)\n"
+				               "and scale its height to match, so texels stay square. Vertical repeats line up in world space." );
+				grid->addWidget( b, 5, 2 );
+				QObject::connect( b, &QAbstractButton::clicked, SurfaceInspector_FitWidthKeepAspect );
+			}
+			{
+				auto *b = new QPushButton( "Height" );
+				b->setMinimumWidth( 10 );
+				b->setToolTip( "Fit the texture's height to each face (repeated as many times as the right Fit box)\n"
+				               "and scale its width to match, so texels stay square. Horizontal repeats line up in world space." );
+				grid->addWidget( b, 5, 3 );
+				QObject::connect( b, &QAbstractButton::clicked, SurfaceInspector_FitHeightKeepAspect );
 			}
 			{
 				auto *b = new QPushButton( "Natural" );
