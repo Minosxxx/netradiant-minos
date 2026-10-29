@@ -49,16 +49,3 @@ Newest first within each section.
 
 ### Build
 - GitHub Actions builds a Windows (MSYS2 MINGW64) package on every push to `hotspot`.
-
-## Companion tool: MD3 Exporter for Maya (separate package)
-- Exports static meshes from Maya 2022-2025 as Quake 3 `.md3`.
-- Export groups (pivot locators): everything under a group is merged into one model, measured from
-  the locator. Created with "Create Export Group", which asks for the model's name.
-- Per-scene game folder (asked for when unknown) and models folder, kept inside `baseq3/models`.
-- Validation of the renderer limits (1000 verts / 2000 tris per surface, 32 surfaces, ±512 units)
-  with automatic surface splitting.
-- Shader names from texture paths or material names, with per-material overrides; `tag_*` locators
-  are exported as tags.
-- The window follows the scene (new, deleted or renamed groups, undo, opening another scene).
-- Maya-style dark interface with icons. The export group and material lists are darker than the
-  panel, with alternating row shades.
