@@ -7914,6 +7914,22 @@ void RadiantSelectionSystem::ConstructPivotRotation() const {
 	}
 }
 
+/// Put the gizmo at the origin of a single selected fixed-size entity (e.g. misc_model),
+/// which for models is the model's own (0,0,0): the pivot it was exported with.
+bool g_pivotAtEntityOrigin = true;
+
+/// The origin of the selection if it is exactly one fixed-size (point) entity.
+static bool selected_entity_origin( Vector3& origin ){
+	if ( !g_pivotAtEntityOrigin || GlobalSelectionSystem().Mode() != SelectionSystem::ePrimitive || GlobalSelectionSystem().countSelected() != 1 )
+		return false;
+	scene::Instance& instance = GlobalSelectionSystem().ultimateSelected();
+	Entity* entity = Node_getEntity( instance.path().top() );
+	if ( entity == nullptr || !entity->getEntityClass().fixedsize )
+		return false;
+	origin = instance.localToWorld().t().vec3();
+	return true;
+}
+
 void RadiantSelectionSystem::ConstructPivot() const {
 	if ( !m_pivotChanged || m_pivot_moving ) {
 		return;
@@ -7924,6 +7940,8 @@ void RadiantSelectionSystem::ConstructPivot() const {
 		m_bounds = getSelectionAABB();
 		if( !m_pivotIsCustom ){
 			Vector3 object_pivot = m_bounds.origin;
+			if ( !g_bTmpComponentMode )
+				selected_entity_origin( object_pivot );
 
 			//vector3_snap( object_pivot, GetSnapGridSize() );
 			//globalOutputStream() << object_pivot << '\n';
@@ -8022,6 +8040,7 @@ void SelectionSystem_constructPreferences( PreferencesPage& page ){
 	page.appendSpinner( "Selector size (pixels)", g_SELECT_EPSILON, 2, 64 );
 	page.appendCheckBox( "", "Prefer point entities in 2D", getSelectionSystem().m_bPreferPointEntsIn2D );
 	page.appendCheckBox( "", "Create brushes in 3D", g_3DCreateBrushes );
+	page.appendCheckBox( "", "Pivot at entity origin (models: their exported pivot)", g_pivotAtEntityOrigin );
 	{
 		const char* styles[] = { "XY plane + Z with Alt", "View plane + Forward with Alt", };
 		page.appendCombo(
@@ -8060,6 +8079,7 @@ void SelectionSystem_Construct(){
 	GlobalPreferenceSystem().registerPreference( "SELECT_EPSILON", IntImportStringCaller( g_SELECT_EPSILON ), IntExportStringCaller( g_SELECT_EPSILON ) );
 	GlobalPreferenceSystem().registerPreference( "PreferPointEntsIn2D", BoolImportStringCaller( getSelectionSystem().m_bPreferPointEntsIn2D ), BoolExportStringCaller( getSelectionSystem().m_bPreferPointEntsIn2D ) );
 	GlobalPreferenceSystem().registerPreference( "3DCreateBrushes", BoolImportStringCaller( g_3DCreateBrushes ), BoolExportStringCaller( g_3DCreateBrushes ) );
+	GlobalPreferenceSystem().registerPreference( "PivotAtEntityOrigin", BoolImportStringCaller( g_pivotAtEntityOrigin ), BoolExportStringCaller( g_pivotAtEntityOrigin ) );
 	GlobalPreferenceSystem().registerPreference( "3DMoveStyle", IntImportStringCaller( TranslateFreeXY_Z::m_viewdependent ), IntExportStringCaller( TranslateFreeXY_Z::m_viewdependent ) );
 	SelectionSystem_registerPreferencesPage();
 }
