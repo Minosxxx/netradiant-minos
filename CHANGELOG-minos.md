@@ -60,4 +60,5 @@ Newest first within each section.
 - Shader names from texture paths or material names, with per-material overrides; `tag_*` locators
   are exported as tags.
 - The window follows the scene (new, deleted or renamed groups, undo, opening another scene).
-- Maya-style dark interface with icons.
+- Maya-style dark interface with icons. The export group and material lists are darker than the
+  panel, with alternating row shades.
