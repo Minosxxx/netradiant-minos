@@ -24,6 +24,7 @@
 #include "debugging/debugging.h"
 
 #include <map>
+#include <string>
 #include "string/string.h"
 #include "versionlib.h"
 #include "gtkutil/accelerator.h"
@@ -448,6 +449,34 @@ void SaveCommandMap( const char* path ){
 			file << '\n';
 		};
 		GlobalShortcuts_foreach( writeCommandMap );
+		file << '\n';
+		file << "[Migrations]\n";
+		file << "mayaWER=1\n";
+	}
+}
+
+/// One-time switch of shortcuts saved by older versions to Maya-style W / E / R
+/// (move / rotate / scale; edge mode moves from E to Y). Only applied when the user still has
+/// the old defaults for all of them, so customised shortcuts are left alone.
+static void MigrateMayaWER( const char* strINI ){
+	char value[1024];
+	if ( read_var( strINI, "Migrations", "mayaWER", value ) )
+		return;
+	std::map<std::string, QKeySequence*> keys;
+	auto collect = [&keys]( const char* name, QKeySequence& accelerator ){
+		keys[name] = &accelerator;
+	};
+	GlobalShortcuts_foreach( collect );
+	const auto is = [&keys]( const char* name, const char* sequence ){
+		const auto it = keys.find( name );
+		return it != keys.end() && *it->second == QKeySequence( sequence );
+	};
+	if ( is( "MouseTranslate", "W" ) && is( "MouseRotate", "R" ) && is( "MouseScale", "" ) && is( "DragEdges", "E" )
+	  && keys.count( "MouseScale" ) && keys.count( "MouseRotate" ) && keys.count( "DragEdges" ) ) {
+		*keys["MouseRotate"] = QKeySequence( "E" );
+		*keys["MouseScale"] = QKeySequence( "R" );
+		*keys["DragEdges"] = QKeySequence( "Y" );
+		globalOutputStream() << "shortcuts: switched to W move / E rotate / R scale (edge mode: Y)\n";
 	}
 }
 
@@ -504,6 +533,7 @@ void LoadCommandMap( const char* path ){
 			ReadCommandMap visitor( strINI );
 			GlobalShortcuts_foreach( visitor );
 			globalOutputStream() << "parsed " << visitor.count() << " custom shortcuts\n";
+			MigrateMayaWER( strINI );
 		}
 		else
 		{

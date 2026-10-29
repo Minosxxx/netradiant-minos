@@ -418,20 +418,37 @@ void ToggleDragSkewModes(){
 
 
 
+extern bool g_rotateSnap;
+extern bool g_scaleSnap;
+#include "dialog.h" // BoolExportCaller
+
+ToggleItem g_rotateSnap_item{ BoolExportCaller( g_rotateSnap ) };
+void ToggleRotateSnap(){
+	g_rotateSnap = !g_rotateSnap;
+	g_rotateSnap_item.update();
+}
+ToggleItem g_scaleSnap_item{ BoolExportCaller( g_scaleSnap ) };
+void ToggleScaleSnap(){
+	g_scaleSnap = !g_scaleSnap;
+	g_scaleSnap_item.update();
+}
+
 void Tools_registerCommands(){
 	GlobalToggles_insert( "DragVertices", FreeCaller<SelectVertexMode>(), ToggleItem::AddCallbackCaller( g_vertexMode_button ), QKeySequence( "V" ) );
-	GlobalToggles_insert( "DragEdges", FreeCaller<SelectEdgeMode>(), ToggleItem::AddCallbackCaller( g_edgeMode_button ), QKeySequence( "E" ) );
+	GlobalToggles_insert( "DragEdges", FreeCaller<SelectEdgeMode>(), ToggleItem::AddCallbackCaller( g_edgeMode_button ), QKeySequence( "Y" ) );
 	GlobalToggles_insert( "DragFaces", FreeCaller<SelectFaceMode>(), ToggleItem::AddCallbackCaller( g_faceMode_button ), QKeySequence( "F" ) );
 
 	GlobalToggles_insert( "ToggleClipper", FreeCaller<ClipperMode>(), ToggleItem::AddCallbackCaller( g_clipper_button ), QKeySequence( "X" ) );
 
 	GlobalToggles_insert( "MouseTranslate", FreeCaller<TranslateMode>(), ToggleItem::AddCallbackCaller( g_translatemode_button ), QKeySequence( "W" ) );
-	GlobalToggles_insert( "MouseRotate", FreeCaller<RotateMode>(), ToggleItem::AddCallbackCaller( g_rotatemode_button ), QKeySequence( "R" ) );
-	GlobalToggles_insert( "MouseScale", FreeCaller<ScaleMode>(), ToggleItem::AddCallbackCaller( g_scalemode_button ) );
+	GlobalToggles_insert( "MouseRotate", FreeCaller<RotateMode>(), ToggleItem::AddCallbackCaller( g_rotatemode_button ), QKeySequence( "E" ) );
+	GlobalToggles_insert( "MouseScale", FreeCaller<ScaleMode>(), ToggleItem::AddCallbackCaller( g_scalemode_button ), QKeySequence( "R" ) );
 	GlobalToggles_insert( "MouseTransform", FreeCaller<SkewMode>(), ToggleItem::AddCallbackCaller( g_skewmode_button ) );
 	GlobalToggles_insert( "MouseDrag", FreeCaller<DragMode>(), ToggleItem::AddCallbackCaller( g_dragmode_button ) );
 	GlobalToggles_insert( "MouseBuild", FreeCaller<BuildMode>(), ToggleItem::AddCallbackCaller( g_build_button ), QKeySequence( "B" ) );
 	GlobalToggles_insert( "MouseUV", FreeCaller<UVMode>(), ToggleItem::AddCallbackCaller( g_uv_button ), QKeySequence( "G" ) );
+	GlobalToggles_insert( "ToggleRotateSnap", FreeCaller<ToggleRotateSnap>(), ToggleItem::AddCallbackCaller( g_rotateSnap_item ) );
+	GlobalToggles_insert( "ToggleScaleSnap", FreeCaller<ToggleScaleSnap>(), ToggleItem::AddCallbackCaller( g_scaleSnap_item ) );
 	GlobalCommands_insert( "MouseRotateOrScale", FreeCaller<ToggleRotateScaleModes>() );
 	GlobalCommands_insert( "MouseDragOrTransform", FreeCaller<ToggleDragSkewModes>(), QKeySequence( "Q" ) );
 

@@ -52,6 +52,11 @@
 
 #include "grid.h"
 
+/// Rotate / scale snapping (toolbar toggles). Holding Shift does the opposite while dragging a rotation.
+bool g_rotateSnap = true;
+float g_rotateSnapAngle = 15.f;   // degrees
+bool g_scaleSnap = true;          // scale handles change the size in grid steps
+
 int g_SELECT_EPSILON = 12;
 
 struct Pivot2World
@@ -288,8 +293,9 @@ public:
 			constrain_to_axis( current, m_axis );
 		}
 
-		if( snap ){
-			m_rotatable.rotate( quaternion_for_axisangle( m_axis, float_snapped( angle_for_axis( m_start, current, m_axis ), static_cast<float>( c_pi / 12.0 ) ) ) );
+		if( snap != g_rotateSnap ){
+			const float step = static_cast<float>( std::max( 0.01f, g_rotateSnapAngle ) * c_pi / 180.0 );
+			m_rotatable.rotate( quaternion_for_axisangle( m_axis, float_snapped( angle_for_axis( m_start, current, m_axis ), step ) ) );
 		}
 		else{
 			m_rotatable.rotate( quaternion_for_axisangle( m_axis, angle_for_axis( m_start, current, m_axis ) ) );
@@ -550,7 +556,8 @@ public:
 		Vector3 delta = vector3_subtracted( current, m_start );
 
 		delta = translation_local2object( delta, manip2object );
-		vector3_snap( delta, GetSnapGridSize() );
+		if( g_scaleSnap )
+			vector3_snap( delta, GetSnapGridSize() );
 		vector3_scale( delta, m_axis );
 
 		Vector3 start( vector3_snapped( m_start, GetSnapGridSize() != 0.f ? GetSnapGridSize() : 1e-3f ) );
@@ -622,7 +629,8 @@ public:
 		Vector3 delta = vector3_subtracted( current, m_start );
 
 		delta = translation_local2object( delta, manip2object );
-		vector3_snap( delta, GetSnapGridSize() );
+		if( g_scaleSnap )
+			vector3_snap( delta, GetSnapGridSize() );
 		if( m_axis != g_vector3_identity )
 			delta = vector3_scaled( delta, m_axis ) + vector3_scaled( delta, m_axis2 );
 
@@ -8041,6 +8049,7 @@ void SelectionSystem_constructPreferences( PreferencesPage& page ){
 	page.appendCheckBox( "", "Prefer point entities in 2D", getSelectionSystem().m_bPreferPointEntsIn2D );
 	page.appendCheckBox( "", "Create brushes in 3D", g_3DCreateBrushes );
 	page.appendCheckBox( "", "Pivot at entity origin (models: their exported pivot)", g_pivotAtEntityOrigin );
+	page.appendSpinner( "Rotate snap angle (degrees)", g_rotateSnapAngle, 0.1, 180.0, 1 );
 	{
 		const char* styles[] = { "XY plane + Z with Alt", "View plane + Forward with Alt", };
 		page.appendCombo(
@@ -8079,6 +8088,9 @@ void SelectionSystem_Construct(){
 	GlobalPreferenceSystem().registerPreference( "SELECT_EPSILON", IntImportStringCaller( g_SELECT_EPSILON ), IntExportStringCaller( g_SELECT_EPSILON ) );
 	GlobalPreferenceSystem().registerPreference( "PreferPointEntsIn2D", BoolImportStringCaller( getSelectionSystem().m_bPreferPointEntsIn2D ), BoolExportStringCaller( getSelectionSystem().m_bPreferPointEntsIn2D ) );
 	GlobalPreferenceSystem().registerPreference( "3DCreateBrushes", BoolImportStringCaller( g_3DCreateBrushes ), BoolExportStringCaller( g_3DCreateBrushes ) );
+	GlobalPreferenceSystem().registerPreference( "RotateSnap", BoolImportStringCaller( g_rotateSnap ), BoolExportStringCaller( g_rotateSnap ) );
+	GlobalPreferenceSystem().registerPreference( "RotateSnapAngle", FloatImportStringCaller( g_rotateSnapAngle ), FloatExportStringCaller( g_rotateSnapAngle ) );
+	GlobalPreferenceSystem().registerPreference( "ScaleSnap", BoolImportStringCaller( g_scaleSnap ), BoolExportStringCaller( g_scaleSnap ) );
 	GlobalPreferenceSystem().registerPreference( "PivotAtEntityOrigin", BoolImportStringCaller( g_pivotAtEntityOrigin ), BoolExportStringCaller( g_pivotAtEntityOrigin ) );
 	GlobalPreferenceSystem().registerPreference( "3DMoveStyle", IntImportStringCaller( TranslateFreeXY_Z::m_viewdependent ), IntExportStringCaller( TranslateFreeXY_Z::m_viewdependent ) );
 	SelectionSystem_registerPreferencesPage();

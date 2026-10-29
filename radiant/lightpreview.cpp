@@ -43,6 +43,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QShortcut>
+#include <QFrame>
 #include <QGuiApplication>
 #include <QCryptographicHash>
 #include <QRegularExpression>
@@ -67,6 +68,7 @@
 #include "mainframe.h"
 #include "map.h"
 #include "qe3.h"
+#include "points.h"
 
 namespace
 {
@@ -210,7 +212,8 @@ class PreviewWindow : public QWidget
 	QElapsedTimer m_stepClock;
 	QElapsedTimer m_totalClock;
 	QStringList m_stepTimes;
-	bool m_leaked = false;
+	bool m_leaked = false;          // the last -bsp stage reported a leak (kept through -onlyents relights)
+	QWidget* m_leakBar = nullptr;
 
 	QTimer m_debounce;
 	QTimer m_followTimer;
@@ -297,6 +300,32 @@ public:
 			QObject::connect( logBtn, &QToolButton::toggled, [this]( bool on ){ m_log->setVisible( on ); } );
 		}
 
+		{ // leak warning, shown while the last BSP stage leaked
+			m_leakBar = new QFrame;
+			m_leakBar->setObjectName( "leakBar" );
+			m_leakBar->setStyleSheet( "QFrame#leakBar { background: #5a4313; border: 1px solid #b8862b; border-radius: 3px; }"
+			                          "QFrame#leakBar QLabel { color: #ffe1a6; }" );
+			auto* bar = new QHBoxLayout( m_leakBar );
+			bar->setContentsMargins( 8, 4, 4, 4 );
+			auto* text = new QLabel( "<b>The map leaks.</b> q3map2 can't seal it, so the outside of the map is kept and "
+			                         "lighting (especially sky light) is wrong. Find the hole along the leak line." );
+			text->setWordWrap( true );
+			bar->addWidget( text, 1 );
+			auto* show = new QPushButton( "Show leak in editor" );
+			show->setToolTip( "Draws the leak line in the 2D and 3D views and moves the camera to its start.\n"
+			                  "Ctrl+Shift+K / Ctrl+Shift+L step along it." );
+			bar->addWidget( show );
+			QObject::connect( show, &QPushButton::clicked, [this](){
+				const QString lin = m_dir + "preview.lin";
+				if ( QFileInfo::exists( lin ) )
+					Pointfile_ShowFile( lin.toUtf8().constData() );
+				else
+					m_status->setText( "No leak line was written (" + lin + ")" );
+			} );
+			m_leakBar->setVisible( false );
+			root->addWidget( m_leakBar );
+		}
+
 		auto* split = new QSplitter( Qt::Horizontal );
 		root->addWidget( split, 1 );
 		auto* vsplit = new QSplitter( Qt::Vertical );
@@ -332,8 +361,6 @@ public:
 		m_process.setWorkingDirectory( m_dir );
 		QObject::connect( &m_process, &QProcess::readyReadStandardOutput, [this](){
 			const QString text = QString::fromLocal8Bit( m_process.readAllStandardOutput() );
-			if ( text.contains( "LEAKED" ) )
-				m_leaked = true;
 			m_log->moveCursor( QTextCursor::End );
 			m_log->insertPlainText( text );
 			m_log->moveCursor( QTextCursor::End );
@@ -649,7 +676,9 @@ private:
 		}
 
 		m_steps.clear();
-		const bool entitiesOnly = m_bspValid && m_runGeometryHash == m_lastGeometryHash && QFileInfo::exists( m_bspPath );
+		// while the map leaks, always run the full BSP stage, so fixing the leak (often by deleting or
+		// moving a point entity, which -onlyents would skip) clears the warning
+		const bool entitiesOnly = !m_leaked && m_bspValid && m_runGeometryHash == m_lastGeometryHash && QFileInfo::exists( m_bspPath );
 		if ( entitiesOnly ) {
 			m_steps.push_back( { "entities", program, base + QStringList{ "-bsp", "-onlyents", m_mapPath } } );
 		}
@@ -663,7 +692,6 @@ private:
 
 		m_log->clear();
 		m_stepTimes.clear();
-		m_leaked = false;
 		m_step = 0;
 		m_totalClock.start();
 		m_compile->setText( "Cancel" );
@@ -702,6 +730,14 @@ private:
 		if ( m_steps.empty() || m_step >= m_steps.size() )
 			return; // cancelled
 		m_stepTimes << QString( "%1 %2 s" ).arg( m_steps[m_step].label ).arg( m_stepClock.elapsed() / 1000.0, 0, 'f', 1 );
+		if ( ok && m_steps[m_step].label == "bsp" ) {
+			// q3map2 prints "******* leaked *******" (and keeps going); with -leaktest it stops
+			static const QRegularExpression leakRe( "\\*+\\s*leaked\\s*\\*+|MAP LEAKED", QRegularExpression::CaseInsensitiveOption );
+			m_leaked = leakRe.match( m_log->toPlainText() ).hasMatch();
+			m_leakBar->setVisible( m_leaked );
+			if ( m_leaked )
+				appendLog( "Note: the map leaks; the leak line is " + m_dir + "preview.lin\n" );
+		}
 		if ( !ok ) {
 			const bool restart = m_pending;
 			if ( m_steps[m_step].label != "light" )
@@ -737,7 +773,7 @@ private:
 			if ( g_region_active )
 				status += ". Region only: the region's walls block sun and sky light from outside it";
 			if ( m_leaked )
-				status += ". Warning: the map leaks";
+				status += ". Warning: the map leaks (see the bar above)";
 			m_status->setText( status );
 			m_view->setOverlayText( QString() );
 		}

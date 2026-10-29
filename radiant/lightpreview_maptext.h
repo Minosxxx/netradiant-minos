@@ -13,8 +13,21 @@
 namespace lightpreview
 {
 
+/// Point entities whose geometry q3map2 bakes into the BSP during -bsp, so -onlyents can't update them.
+inline bool entity_is_baked_geometry( const QByteArray& keys ){
+	for ( const QByteArray& line : keys.split( '\n' ) )
+	{
+		if ( !line.startsWith( "\"classname\"" ) )
+			continue;
+		const QByteArray value = line.mid( 11 ).trimmed();
+		return value == "\"misc_model\"" || value == "\"_decal\"" || value == "\"_skybox\"";
+	}
+	return false;
+}
+
 /// Hashes of an exported .map: everything, and only what the BSP stage depends on
-/// (brush/patch contents plus the keys of entities that own brushes).
+/// (brush/patch contents, the keys of entities that own brushes, and point entities whose
+/// geometry is baked in: misc_model, _decal, _skybox).
 inline void hash_map_text( const QByteArray& text, QByteArray& fullHash, QByteArray& geometryHash ){
 	fullHash = QCryptographicHash::hash( text, QCryptographicHash::Sha1 );
 	QCryptographicHash geometry( QCryptographicHash::Sha1 );
@@ -37,7 +50,7 @@ inline void hash_map_text( const QByteArray& text, QByteArray& fullHash, QByteAr
 			continue;
 		}
 		if ( line == "}" ) {
-			if ( depth == 1 && entityHasBrushes )
+			if ( depth == 1 && ( entityHasBrushes || entity_is_baked_geometry( entityKeys ) ) )
 				geometry.addData( entityKeys );
 			--depth;
 			continue;

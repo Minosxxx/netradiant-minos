@@ -1373,6 +1373,8 @@ void Manipulators_constructToolbar( QToolBar* toolbar ){
 	toolbar_append_toggle_button( toolbar, "Translate", "select_mousetranslate.png", "MouseTranslate" );
 	toolbar_append_toggle_button( toolbar, "Rotate", "select_mouserotate.png", "MouseRotate" );
 	toolbar_append_toggle_button( toolbar, "Scale", "select_mousescale.png", "MouseScale" );
+	toolbar_append_toggle_button( toolbar, "Snap rotation to angle steps (Shift while dragging: the opposite; step in Preferences > Selection)", "snap_rotate.png", "ToggleRotateSnap" );
+	toolbar_append_toggle_button( toolbar, "Snap scaling to the grid", "snap_scale.png", "ToggleScaleSnap" );
 	toolbar_append_toggle_button( toolbar, "Transform (Q)", "select_mousetransform.png", "MouseTransform" ); // hardcoded shortcut tip of "MouseDragOrTransform"...
 	toolbar_append_toggle_button( toolbar, "Resize (Q)", "select_mouseresize.png", "MouseDrag" ); // hardcoded shortcut tip of "MouseDragOrTransform"...
 	toolbar_append_toggle_button( toolbar, "Clipper", "select_clipper.png", "ToggleClipper" );

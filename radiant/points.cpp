@@ -28,6 +28,8 @@
 
 #include "points.h"
 
+#include <string>
+
 #include "debugging/debugging.h"
 
 #include "irender.h"
@@ -50,6 +52,7 @@
 
 
 void Pointfile_Parse( class CPointfile& pointfile );
+static std::string s_pointfileOverride; // read this .lin instead of the map's own (lighting preview compiles)
 
 
 class CPointfile : public ISAXHandler, public Renderable, public OpenGLRenderable
@@ -252,7 +255,14 @@ void Pointfile_Parse( CPointfile& pointfile ){
 	const char* mapname = Map_Name( g_map );
 	StringOutputStream name( 256 );
 
-	size = LoadFile( name( PathExtensionless( mapname ), ".lin" ), (void**)&data );
+	if ( !s_pointfileOverride.empty() )
+		size = LoadFile( name( s_pointfileOverride.c_str() ), (void**)&data );
+	else
+		size = LoadFile( name( PathExtensionless( mapname ), ".lin" ), (void**)&data );
+	if ( size == -1 && !s_pointfileOverride.empty() ) {
+		globalErrorStream() << "Pointfile " << name << " not found\n";
+		return;
+	}
 	if ( size == -1 ) {
 		globalErrorStream() << "Pointfile " << name << " not found\n";
 		/* try .pts (q1) */
@@ -309,6 +319,16 @@ void Pointfile_Parse( CPointfile& pointfile ){
 
 void Pointfile_Clear(){
 	s_pointfile.show( false );
+}
+
+void Pointfile_ShowFile( const char* path ){
+	s_pointfile.show( false );
+	s_pointfileOverride = path;
+	s_pointfile.show( true );
+	s_pointfileOverride.clear();
+	s_check_point = s_pointfile.begin();
+	if ( s_pointfile.shown() )
+		Pointfile_UpdateViews( s_check_point );
 }
 
 void Pointfile_Toggle(){

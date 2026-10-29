@@ -28,6 +28,8 @@
 #pragma once
 
 void Pointfile_Clear();
+/// Shows the leak line from \p path (a .lin written by q3map2) and moves the views to its start.
+void Pointfile_ShowFile( const char* path );
 void Pointfile_Delete();
 
 void Pointfile_Construct();
