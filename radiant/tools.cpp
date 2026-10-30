@@ -433,6 +433,18 @@ void ToggleScaleSnap(){
 	g_scaleSnap_item.update();
 }
 
+extern bool g_pivotAtLastSelected;
+ToggleItem g_pivotLastSelected_item{ BoolExportCaller( g_pivotAtLastSelected ) };
+void PivotAtLastSelected_set( bool value ){
+	g_pivotAtLastSelected = value;
+	g_pivotLastSelected_item.update();
+	GlobalSelectionSystem().pivotChanged();
+	SceneChangeNotify();
+}
+void TogglePivotAtLastSelected(){
+	PivotAtLastSelected_set( !g_pivotAtLastSelected );
+}
+
 void Tools_registerCommands(){
 	GlobalToggles_insert( "DragVertices", FreeCaller<SelectVertexMode>(), ToggleItem::AddCallbackCaller( g_vertexMode_button ), QKeySequence( "V" ) );
 	GlobalToggles_insert( "DragEdges", FreeCaller<SelectEdgeMode>(), ToggleItem::AddCallbackCaller( g_edgeMode_button ), QKeySequence( "Y" ) );
@@ -447,6 +459,7 @@ void Tools_registerCommands(){
 	GlobalToggles_insert( "MouseDrag", FreeCaller<DragMode>(), ToggleItem::AddCallbackCaller( g_dragmode_button ) );
 	GlobalToggles_insert( "MouseBuild", FreeCaller<BuildMode>(), ToggleItem::AddCallbackCaller( g_build_button ), QKeySequence( "B" ) );
 	GlobalToggles_insert( "MouseUV", FreeCaller<UVMode>(), ToggleItem::AddCallbackCaller( g_uv_button ), QKeySequence( "G" ) );
+	GlobalToggles_insert( "TogglePivotLastSelected", FreeCaller<TogglePivotAtLastSelected>(), ToggleItem::AddCallbackCaller( g_pivotLastSelected_item ) );
 	GlobalToggles_insert( "ToggleRotateSnap", FreeCaller<ToggleRotateSnap>(), ToggleItem::AddCallbackCaller( g_rotateSnap_item ) );
 	GlobalToggles_insert( "ToggleScaleSnap", FreeCaller<ToggleScaleSnap>(), ToggleItem::AddCallbackCaller( g_scaleSnap_item ) );
 	GlobalCommands_insert( "MouseRotateOrScale", FreeCaller<ToggleRotateScaleModes>() );

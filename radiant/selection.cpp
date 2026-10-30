@@ -7925,12 +7925,10 @@ void RadiantSelectionSystem::ConstructPivotRotation() const {
 /// Put the gizmo at the origin of a single selected fixed-size entity (e.g. misc_model),
 /// which for models is the model's own (0,0,0): the pivot it was exported with.
 bool g_pivotAtEntityOrigin = true;
+bool g_pivotAtLastSelected = false; // several objects selected: gizmo on the last selected one, not the centre
 
-/// The origin of the selection if it is exactly one fixed-size (point) entity.
-static bool selected_entity_origin( Vector3& origin ){
-	if ( !g_pivotAtEntityOrigin || GlobalSelectionSystem().Mode() != SelectionSystem::ePrimitive || GlobalSelectionSystem().countSelected() != 1 )
-		return false;
-	scene::Instance& instance = GlobalSelectionSystem().ultimateSelected();
+/// The origin of \p instance if it is a fixed-size (point) entity.
+static bool instance_entity_origin( scene::Instance& instance, Vector3& origin ){
 	Entity* entity = Node_getEntity( instance.path().top() );
 	if ( entity == nullptr || !entity->getEntityClass().fixedsize )
 		return false;
@@ -7946,6 +7944,26 @@ static bool selected_entity_origin( Vector3& origin ){
 	return true;
 }
 
+/// Pivot from the selection's object(s) instead of the selection bounds' centre, if the options ask
+/// for it: one point entity -> its origin; several objects -> the last selected one (its origin if
+/// it is a point entity, else the centre of its bounds).
+static bool selected_object_pivot( Vector3& origin ){
+	if ( GlobalSelectionSystem().Mode() != SelectionSystem::ePrimitive || GlobalSelectionSystem().countSelected() == 0 )
+		return false;
+	scene::Instance& last = GlobalSelectionSystem().ultimateSelected();
+	if ( GlobalSelectionSystem().countSelected() == 1 )
+		return g_pivotAtEntityOrigin && instance_entity_origin( last, origin );
+	if ( !g_pivotAtLastSelected )
+		return false;
+	if ( g_pivotAtEntityOrigin && instance_entity_origin( last, origin ) )
+		return true;
+	const AABB& bounds = last.worldAABB();
+	if ( !aabb_valid( bounds ) )
+		return false;
+	origin = bounds.origin;
+	return true;
+}
+
 void RadiantSelectionSystem::ConstructPivot() const {
 	if ( !m_pivotChanged || m_pivot_moving ) {
 		return;
@@ -7957,7 +7975,7 @@ void RadiantSelectionSystem::ConstructPivot() const {
 		if( !m_pivotIsCustom ){
 			Vector3 object_pivot = m_bounds.origin;
 			if ( !g_bTmpComponentMode )
-				selected_entity_origin( object_pivot );
+				selected_object_pivot( object_pivot );
 
 			//vector3_snap( object_pivot, GetSnapGridSize() );
 			//globalOutputStream() << object_pivot << '\n';
@@ -8052,11 +8070,22 @@ void RadiantSelectionSystem::renderSolid( Renderer& renderer, const VolumeTest& 
 #include "preferencesystem.h"
 #include "preferences.h"
 
+void PivotAtLastSelected_set( bool value );
+void PivotAtLastSelected_import( bool value ){
+	PivotAtLastSelected_set( value );
+}
+void PivotAtLastSelected_export( const BoolImportCallback& importer ){
+	importer( g_pivotAtLastSelected );
+}
+
 void SelectionSystem_constructPreferences( PreferencesPage& page ){
 	page.appendSpinner( "Selector size (pixels)", g_SELECT_EPSILON, 2, 64 );
 	page.appendCheckBox( "", "Prefer point entities in 2D", getSelectionSystem().m_bPreferPointEntsIn2D );
 	page.appendCheckBox( "", "Create brushes in 3D", g_3DCreateBrushes );
 	page.appendCheckBox( "", "Pivot at entity origin (models: their exported pivot)", g_pivotAtEntityOrigin );
+	page.appendCheckBox( "", "Several selected: gizmo on the last selected object (else: centre)",
+	                     BoolImportCallback( FreeCaller1<bool, PivotAtLastSelected_import>() ),
+	                     BoolExportCallback( FreeCaller1<const BoolImportCallback&, PivotAtLastSelected_export>() ) );
 	page.appendSpinner( "Rotate snap angle (degrees)", g_rotateSnapAngle, 0.1, 180.0, 1 );
 	{
 		const char* styles[] = { "XY plane + Z with Alt", "View plane + Forward with Alt", };
@@ -8099,6 +8128,7 @@ void SelectionSystem_Construct(){
 	GlobalPreferenceSystem().registerPreference( "RotateSnap", BoolImportStringCaller( g_rotateSnap ), BoolExportStringCaller( g_rotateSnap ) );
 	GlobalPreferenceSystem().registerPreference( "RotateSnapAngle", FloatImportStringCaller( g_rotateSnapAngle ), FloatExportStringCaller( g_rotateSnapAngle ) );
 	GlobalPreferenceSystem().registerPreference( "ScaleSnap", BoolImportStringCaller( g_scaleSnap ), BoolExportStringCaller( g_scaleSnap ) );
+	GlobalPreferenceSystem().registerPreference( "PivotAtLastSelected", BoolImportStringCaller( g_pivotAtLastSelected ), BoolExportStringCaller( g_pivotAtLastSelected ) );
 	GlobalPreferenceSystem().registerPreference( "PivotAtEntityOrigin", BoolImportStringCaller( g_pivotAtEntityOrigin ), BoolExportStringCaller( g_pivotAtEntityOrigin ) );
 	GlobalPreferenceSystem().registerPreference( "3DMoveStyle", IntImportStringCaller( TranslateFreeXY_Z::m_viewdependent ), IntExportStringCaller( TranslateFreeXY_Z::m_viewdependent ) );
 	SelectionSystem_registerPreferencesPage();
