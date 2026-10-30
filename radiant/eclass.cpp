@@ -20,6 +20,7 @@
  */
 
 #include "eclass.h"
+#include "playerpreview.h"
 
 #include "debugging/debugging.h"
 
@@ -220,6 +221,9 @@ void EntityClassQuake3_Construct(){
 	};
 
 	EntityClassManager_getEClassModules().foreachModule( LoadEntityDefinitionsVisitor( baseDirectory, gameDirectory ) );
+
+	for ( auto& [name, eclass] : g_entityClasses )
+		PlayerPreview_applyTo( *eclass );
 }
 
 EntityClass *Eclass_ForName( const char *name, bool has_brushes ){

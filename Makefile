@@ -900,6 +900,7 @@ $(INSTALLDIR)/radiant.$(EXE): \
 	radiant/hotspot.o \
 	radiant/hotspot_editor.o \
 	radiant/lightpreview.o \
+	radiant/playerpreview.o \
 	radiant/lightpreview_bsp.o \
 	radiant/lightpreview_view.o \
 	radiant/server.o \

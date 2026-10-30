@@ -181,13 +181,17 @@ ModelLoader* ModelLoader_forType( const char* type ){
 	return 0;
 }
 
+#include "playerpreview.h"
+
 NodeSmartReference ModelResource_load( ModelLoader* loader, const char* name ){
 	ScopeDisableScreenUpdates disableScreenUpdates( path_get_filename_start( name ), "Loading Model" );
 
 	NodeSmartReference model( g_nullModel );
 
 	{
-		ArchiveFile* file = GlobalFileSystem().openFile( name );
+		ArchiveFile* file = PlayerPreview_open( name ); // generated spawn point models
+		if ( file == 0 )
+			file = GlobalFileSystem().openFile( name );
 
 		if ( file != 0 ) {
 			globalOutputStream() << "Loaded Model: \"" << name << "\"\n";

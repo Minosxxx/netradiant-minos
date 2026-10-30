@@ -71,6 +71,7 @@
 #include "watchbsp.h"
 #include "xywindow.h"
 #include "entity.h"
+#include "playerpreview.h"
 #include "select.h"
 #include "preferences.h"
 #include "autosave.h"
@@ -266,6 +267,7 @@ public:
 		TextureBrowser_Construct();
 		ModelBrowser_Construct();
 		Entity_Construct();
+		PlayerPreview_Construct();
 		Autosave_Construct();
 		EntityInspector_construct();
 		FindTextureDialog_Construct();
