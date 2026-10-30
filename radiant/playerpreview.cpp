@@ -26,6 +26,7 @@
 #include "mainframe.h"
 
 #include <cstring>
+#include <QWidget>
 
 namespace
 {
@@ -152,13 +153,26 @@ void PlayerPreview_applyTo( EntityClass& eclass ){
 		skin = "_blue";
 	if ( skin == nullptr )
 		return;
+	// only when the player model is there; otherwise the entity keeps its normal box
+	const auto lower = StringStream<128>( "models/players/", g_spawnPreviewModel.c_str(), "/lower.md3" );
+	const char* root = GlobalFileSystem().findFile( lower );
+	if ( root == nullptr || string_empty( root ) ) {
+		static bool warned = false;
+		if ( !warned )
+			globalWarningStream() << "Spawn point preview: " << lower << " not found; spawn points are drawn as boxes\n";
+		warned = true;
+		return;
+	}
 	eclass.m_modelpath = StringStream<128>( "models/players/", g_spawnPreviewModel.c_str(), "/editor_preview", skin, ".md3" );
 }
 
 namespace
 {
 void PlayerPreview_constructPreferences( PreferencesPage& page ){
-	page.appendEntry( "Spawn point player model (restart; empty: box)", g_spawnPreviewModel );
+	QWidget* entry = page.appendEntry( "Spawn point player model (restart)", g_spawnPreviewModel );
+	entry->setToolTip( "Folder name in models/players, e.g. sarge, visor or major.\n"
+	                   "Spawn points are drawn as that player standing. Empty: plain boxes.\n"
+	                   "Takes effect after restarting the editor." );
 }
 void PlayerPreview_constructPage( PreferenceGroup& group ){
 	PreferencesPage page( group.createPage( "Spawn Points", "Spawn Point Display" ) );

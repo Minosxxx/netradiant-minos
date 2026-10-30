@@ -32,6 +32,11 @@ Newest first within each section.
 - Keep aspect: "Width" / "Height" fit buttons fit one axis and keep the texture's aspect ratio.
 
 ### Editing
+- **New:** spawn points (`info_player_deathmatch`, `info_player_start`, CTF spawns) are drawn as a
+  player standing in its idle pose, with the default skin (red / blue skins for CTF spawns). The
+  model is assembled from the game's own player files (lower / upper / head .md3), so nothing is
+  copied out of the pk3s. Choose the player in Preferences > Display > Spawn Points (default Sarge;
+  empty for plain boxes). Without that player model, spawn points stay boxes.
 - **New:** W / E / R = move / rotate / scale. Edge selection moves from E to Y. Shortcut files
   that still have the old defaults are switched once; customised ones are left alone.
 - **New:** toolbar toggles for rotate snapping and scale snapping.

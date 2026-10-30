@@ -239,6 +239,7 @@ EntityClass *Eclass_ForName( const char *name, bool has_brushes ){
 	}
 
 	EntityClass* e = EntityClass_Create_Default( name, has_brushes );
+	PlayerPreview_applyTo( *e ); // classes missing from the definitions (or no definitions at all)
 	return Eclass_InsertAlphabetized( e );
 }
 
