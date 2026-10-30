@@ -22,6 +22,8 @@ Newest first within each section.
   update the preview until a brush changed.
 - **Fixed:** leak detection never triggered (it looked for "LEAKED"; q3map2 prints "leaked").
 - Reloading models (see below) rebuilds the preview, since models are compiled into the map.
+- **Fixed:** the preview kept showing old textures after they were changed on disk; the texture
+  browser's refresh button now reloads them in the preview too, without a recompile.
 
 ### Hotspot texturing (Surface Inspector)
 - Hotspot Apply: each selected face gets the closest-shaped rectangle of the texture's hotspot

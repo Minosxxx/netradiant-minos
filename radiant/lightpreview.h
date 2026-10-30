@@ -11,3 +11,5 @@ void LightPreview_Construct();
 void LightPreview_show();
 /// Model files were reloaded from disk; the next preview update rebuilds the BSP.
 void LightPreview_modelsChanged();
+/// Shaders / textures were reloaded from disk; the preview reloads its copies of the textures.
+void LightPreview_texturesChanged();

@@ -165,6 +165,14 @@ void View::setMap( const Bsp& bsp ){
 	update();
 }
 
+void View::reloadMaterials(){
+	for ( std::size_t i = 0; i < m_materials.size() && i < m_bsp.shaders.size(); ++i )
+		if ( materialFor )
+			m_materials[i].material = materialFor( m_bsp.shaders[i].name );
+	m_texturesDirty = true;
+	update();
+}
+
 void View::clearMap(){
 	m_bsp = Bsp();
 	for ( GpuMaterial& m : m_materials )

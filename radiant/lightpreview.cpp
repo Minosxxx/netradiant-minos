@@ -421,6 +421,11 @@ public:
 			mapChanged();
 	}
 
+	/// Textures/shaders were reloaded in the editor: drop the preview's copies and show the new ones.
+	void texturesChanged(){
+		m_view->reloadMaterials();
+	}
+
 	void showAndCompile(){
 		show();
 		raise();
@@ -860,6 +865,12 @@ void LightPreview_show(){
 	if ( g_window == nullptr )
 		g_window = new PreviewWindow;
 	g_window->showAndCompile();
+}
+
+void LightPreview_texturesChanged(){
+	g_imageCache.clear();
+	if ( g_window != nullptr )
+		g_window->texturesChanged();
 }
 
 void LightPreview_modelsChanged(){

@@ -27,6 +27,7 @@
 
 #include "texwindow.h"
 #include "referencecache.h"
+#include "lightpreview.h"
 
 #include "debugging/debugging.h"
 
@@ -1860,6 +1861,7 @@ void RefreshShaders(){
 	ScopeDisableScreenUpdates disableScreenUpdates( "Processing...", "Loading Shaders" );
 	GlobalShaderSystem().refresh();
 	TextureBrowser_constructTreeStore(); /* texturebrowser tree update on vfs restart */
+	LightPreview_texturesChanged();
 	RefreshReferences(); /* models too: re-exported .md3 / .ase files show up without reopening the map */
 	UpdateAllWindows();
 }

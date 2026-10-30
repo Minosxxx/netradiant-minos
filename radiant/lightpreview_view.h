@@ -78,6 +78,7 @@ public:
 		return m_camera;
 	}
 	void setOverlayText( const QString& text ); // e.g. "outdated"
+	void reloadMaterials();                     // look the shaders up again (textures changed on disk)
 
 protected:
 	void initializeGL() override;
