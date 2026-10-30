@@ -45,6 +45,8 @@ Newest first within each section.
   - Scale snapping sizes in grid steps; turn it off for free scaling.
 - Pivot at entity origin: the gizmo uses the entity's origin, so models rotate around their
   exported pivot. Option in Preferences > Selection.
+- **Fixed:** the move/rotate/scale gizmo of a selected light appeared at the map origin instead of
+  on the light.
 - **New:** the texture browser's refresh button also reloads all models from disk (re-exported
   .md3 / .ase files show up without reopening the map). "Refresh Models" now always reloads,
   including models inside .pk3s.

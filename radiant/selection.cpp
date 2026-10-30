@@ -7934,7 +7934,15 @@ static bool selected_entity_origin( Vector3& origin ){
 	Entity* entity = Node_getEntity( instance.path().top() );
 	if ( entity == nullptr || !entity->getEntityClass().fixedsize )
 		return false;
-	origin = instance.localToWorld().t().vec3();
+	// the "origin" key, not the instance transform: lights keep their position only in the key
+	// (their transform stays at the world origin), and the key is what the game uses anyway
+	const char* key = entity->getKeyValue( "origin" );
+	if ( string_empty( key ) )
+		return false; // no origin key: keep the bounds centre
+	Vector3 parsed;
+	if ( !string_parse_vector3( key, parsed ) )
+		return false;
+	origin = matrix4_transformed_point( instance.parent() != nullptr ? instance.parent()->localToWorld() : g_matrix4_identity, parsed );
 	return true;
 }
 
