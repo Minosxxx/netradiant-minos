@@ -56,6 +56,18 @@ Newest first within each section.
   .md3 / .ase files show up without reopening the map). "Refresh Models" now always reloads,
   including models inside .pk3s.
 
+### Export
+- **New:** File > Export selected to FBX / Export map to FBX (binary FBX 7.4).
+  - Targets: Maya (Y up, 1 unit = 1 cm, matching the MD3 exporter at scale 1), Blender (Z up,
+    1 unit = 1/32 m), Quake (raw Z-up coordinates) and metric Y-up (1/32 m).
+  - One object per entity (worldspawn, func_group, brush entities) and per model, with each model's
+    pivot at its entity origin. Brush faces stay polygons (welded, hard edges), patches are quads,
+    models triangles.
+  - Materials per shader, with the texture linked by file path (absolute and relative). Textures that
+    only exist inside a pk3 are named but not linked.
+  - Tool faces (caulk, clip, nodraw, triggers, sky...) are skipped unless enabled; hidden and filtered
+    objects are left out.
+
 ### Interface
 - Icon size slider in Preferences > Layout (50-400%) for high-DPI / 4K screens.
 

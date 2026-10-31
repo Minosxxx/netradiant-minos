@@ -26,6 +26,7 @@
 #include "iarchive.h"
 #include "idatastream.h"
 #include "imodel.h"
+#include "imodelgeometry.h"
 #include "modelskin.h"
 
 #include "cullable.h"
@@ -173,6 +174,17 @@ public:
 
 	const char* getShader() const {
 		return m_shader.c_str();
+	}
+	void forEachTriangle( const ModelGeometry::TriangleVisitor& visitor ) const {
+		const auto convert = []( const ArbitraryMeshVertex& v ){
+			ModelGeometry::Vertex out;
+			out.xyz[0] = v.vertex.x(); out.xyz[1] = v.vertex.y(); out.xyz[2] = v.vertex.z();
+			out.normal[0] = v.normal.x(); out.normal[1] = v.normal.y(); out.normal[2] = v.normal.z();
+			out.st[0] = v.texcoord.s(); out.st[1] = v.texcoord.t();
+			return out;
+		};
+		for ( std::size_t i = 0; i + 2 < m_indices.size(); i += 3 )
+			visitor( m_shader.c_str(), convert( m_vertices[m_indices[i]] ), convert( m_vertices[m_indices[i + 1]] ), convert( m_vertices[m_indices[i + 2]] ) );
 	}
 	Shader* getState() const {
 		return m_state;
@@ -373,6 +385,12 @@ class PicoModel :
 {
 	typedef std::vector<PicoSurface*> surfaces_t;
 	surfaces_t m_surfaces;
+public:
+	void forEachTriangle( const ModelGeometry::TriangleVisitor& visitor ) const {
+		for ( const PicoSurface* surface : m_surfaces )
+			surface->forEachTriangle( visitor );
+	}
+private:
 
 	AABB m_aabb_local;
 public:
@@ -616,7 +634,7 @@ public:
 	}
 };
 
-class PicoModelNode : public scene::Node::Symbiot, public scene::Instantiable
+class PicoModelNode : public scene::Node::Symbiot, public scene::Instantiable, public ModelGeometry
 {
 	class TypeCasts
 	{
@@ -624,6 +642,7 @@ class PicoModelNode : public scene::Node::Symbiot, public scene::Instantiable
 	public:
 		TypeCasts(){
 			NodeStaticCast<PicoModelNode, scene::Instantiable>::install( m_casts );
+			NodeStaticCast<PicoModelNode, ModelGeometry>::install( m_casts );
 		}
 		NodeTypeCastTable& get(){
 			return m_casts;
@@ -648,6 +667,9 @@ public:
 	}
 	scene::Node& node(){
 		return m_node;
+	}
+	void forEachTriangle( const TriangleVisitor& visitor ) const override {
+		m_picomodel.forEachTriangle( visitor );
 	}
 
 	scene::Instance* create( const scene::Path& path, scene::Instance* parent ){

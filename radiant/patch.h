@@ -823,6 +823,10 @@ public:
 
 	void UpdateCachedData();
 
+	/// The tessellated surface (quad strips), for exporters.
+	const PatchTesselation& getTesselation() const {
+		return m_tess;
+	}
 	const char *GetShader() const {
 		return m_shader.c_str();
 	}

@@ -901,6 +901,7 @@ $(INSTALLDIR)/radiant.$(EXE): \
 	radiant/hotspot_editor.o \
 	radiant/lightpreview.o \
 	radiant/playerpreview.o \
+	radiant/fbxexport.o \
 	radiant/lightpreview_bsp.o \
 	radiant/lightpreview_view.o \
 	radiant/server.o \

@@ -893,6 +893,9 @@ void create_file_menu( QMenuBar *menubar ){
 	create_menu_item_with_mnemonic( menu, "Save s&elected...", "SaveSelected" );
 	create_menu_item_with_mnemonic( menu, "Save re&gion...", "SaveRegion" );
 	menu->addSeparator();
+	create_menu_item_with_mnemonic( menu, "Export selected to &FBX...", "ExportSelectedFBX" );
+	create_menu_item_with_mnemonic( menu, "Export &map to FBX...", "ExportMapFBX" );
+	menu->addSeparator();
 //	create_menu_item_with_mnemonic( menu, "&Refresh models", "RefreshReferences" );
 //	menu->addSeparator();
 	create_menu_item_with_mnemonic( menu, "&Pointfile", "TogglePointfile" );

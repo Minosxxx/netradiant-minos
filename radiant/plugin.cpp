@@ -72,6 +72,7 @@
 #include "xywindow.h"
 #include "entity.h"
 #include "playerpreview.h"
+#include "fbxexport.h"
 #include "select.h"
 #include "preferences.h"
 #include "autosave.h"
@@ -268,6 +269,7 @@ public:
 		ModelBrowser_Construct();
 		Entity_Construct();
 		PlayerPreview_Construct();
+		FbxExport_Construct();
 		Autosave_Construct();
 		EntityInspector_construct();
 		FindTextureDialog_Construct();
