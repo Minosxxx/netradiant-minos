@@ -1,29 +1,82 @@
-NetRadiant-custom
-=================
+# netradiant-minos
+
+A custom build of [NetRadiant-custom](https://github.com/Garux/netradiant-custom) 1.6.0n for
+Quake III Arena / ioquake3 mapping, with a live lighting preview, hotspot texturing, FBX export and
+quality-of-life changes to the transform tools.
+
+| | |
+|---|---|
+| **Source** | branch [`hotspot`](https://github.com/Minosxxx/netradiant-minos/tree/hotspot) (`master` mirrors upstream) |
+| **Windows build** | [Actions](https://github.com/Minosxxx/netradiant-minos/actions) → latest green `build` run → **Windows-x86_64** artifact |
+| **Full feature list** | [FEATURES.md](https://github.com/Minosxxx/netradiant-minos/blob/hotspot/FEATURES.md) |
+| **Changelog** | [CHANGELOG-minos.md](https://github.com/Minosxxx/netradiant-minos/blob/hotspot/CHANGELOG-minos.md) |
+
+## Features
+
+### Lighting preview (View > Lighting Preview)
+- Background q3map2 compile shown lit with vanilla Quake 3's renderer maths (overbright bits, gamma,
+  intensity), so it matches the game.
+- Draft → Final quality presets, auto update after edits, fast `-onlyents` relights when only lights
+  change.
+- Your `-light` options (`-gamma`, `-compensate`, `-dirty`, `-bounce`...) and the game's `r_` settings.
+- Real sky boxes, sun and sky light; Lit / Lighting only / Fullbright views.
+- Follows the editor camera or flies on its own; "Editor camera here" jumps the editor to its view.
+- Leak warning with **Show leak in editor**.
+- Picks up texture and model changes from the editor's refresh.
+
+### Hotspot texturing (Surface Inspector)
+- **Apply** gives each selected face the closest-shaped rectangle of a texture's hotspot sheet;
+  **Grouped** treats parallel faces as one shape.
+- `fit`, `tile_h` and `tile_v` rectangles; textures without a sheet tile as one horizontal strip.
+- **Hotspot Editor** to draw, tag and auto-detect rectangles, saved as a `.hotspot` file.
+- **Keep aspect: Width / Height** fit one axis and keep the texture's proportions.
+
+### Transform tools
+- **W / E / R** = move / rotate / scale.
+- Rotate snapping (15° steps, Shift for the opposite) and scale snapping, as toolbar toggles.
+- Gizmo on a model's origin, so models rotate around their exported pivot.
+- Optional gizmo on the last selected object instead of the selection's centre.
+
+### Models and entities
+- Spawn points drawn as a standing player (Sarge by default, red / blue skins for CTF), built from
+  the game's own model files.
+- The texture browser's refresh button also reloads models from disk.
+
+### FBX export (File menu)
+- Export the selection or the whole map, with presets for Maya, Blender, raw Quake coordinates and
+  metric Y-up.
+- One object per entity and per model, materials with linked textures, tool faces optional.
+
+### Interface
+- Icon size slider (50–400%) for 4K screens.
+
+---
+
+## About NetRadiant-custom (upstream README)
 
 The open-source, cross-platform level editor for id Tech based games.
 
 NetRadiant-custom is a fork of NetRadiant (GtkRadiant 1.4&rarr;massive rewrite&rarr;1.5&rarr;NetRadiant&rarr;this)
 
 ---
-![screenshot](/../readme_files/radDarkShot.png?raw=true)
+![screenshot](https://github.com/Garux/netradiant-custom/blob/readme_files/radDarkShot.png?raw=true)
 ---
 
-## Downloads
+### Downloads
 
-Ready-to-use packages are available in the [Releases section](/../../releases).
+Ready-to-use packages are available in the [Releases section](https://github.com/Garux/netradiant-custom/releases).
 
-## Supported games
+### Supported games
 
 Main focus is on Quake, Quake3 and Quake Live.
 
 Though other normally supported games should work too. Releases include configs for the following games: Alien Arena, Darkplaces, Doom 3, Doombringer, Wolfenstein: Enemy Territory, Heretic II, Half-Life, Jedi Knight Jedi Academy, Jedi Knight II: Jedi Outcast, Kingpin, Neverball, Nexuiz, Open Arena, Project::OSiRiON, Prey, Quake II, Q3Rally, Quake 4, Quetoo, Smokin' Guns, Soldier of Fortune II - Double Helix, Star Trek Voyager : Elite Force, Tremulous, Turtle Arena, UFO:Alien Invasion, Unreal Arena, Unvanquished, Urban Terror, Warfork, Warsow, Return To Castle Wolfenstein, World of Padman, Xonotic, ZEQ2 Lite.
 
-## Features
+### Features
 
 Development is focused on smoothing and tweaking editing process.
 
-#### Random feature highlights
+##### Random feature highlights
 
 * WASD camera binds
 * Fully supported editing in 3D view (brush and entity creation, all manipulating tools)
@@ -78,7 +131,7 @@ Development is focused on smoothing and tweaking editing process.
 * Incredible number of fixes and options
 
 
-#### Q3Map2:
+##### Q3Map2:
 
 * q3map_remapshader remaps anything fine, on all stages
 * Automatic map packager (complete Q3 support)
@@ -107,4 +160,4 @@ Development is focused on smoothing and tweaking editing process.
 
 ###### see changelog-custom.txt for more
 
-## [COMPILING](/COMPILING)
+### [COMPILING](/COMPILING)
